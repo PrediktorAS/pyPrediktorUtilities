@@ -2,4 +2,4 @@
 Contributors
 ============
 
-* Andreas Lydersen <andreas.lydersen@prediktor.com>
+* Andreas Lydersen <andreas.lydersen@tgs.com>

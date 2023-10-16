@@ -1,6 +1,6 @@
 import pytest
 
-from pyprediktorutilites.skeleton import fib, main
+from pyprediktorutilites.send_email import *
 
 __author__ = "Andreas Lydersen"
 __copyright__ = "Andreas Lydersen"
