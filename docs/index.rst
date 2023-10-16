@@ -1,8 +1,8 @@
 ===================
-pyPrediktorUtilites
+pyPrediktorUtilities
 ===================
 
-This is the documentation of **pyPrediktorUtilites**.
+This is the documentation of **pyPrediktorUtilities**.
 
 .. note::
 

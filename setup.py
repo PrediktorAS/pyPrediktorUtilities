@@ -1,5 +1,5 @@
 """
-    Setup file for pyPrediktorUtilites.
+    Setup file for pyPrediktorUtilities.
     Use setup.cfg to configure your project.
 
     This file was generated with PyScaffold 4.5.

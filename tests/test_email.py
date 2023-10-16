@@ -3,7 +3,7 @@ import smtplib
 import logging
 from pydantic import ValidationError
 
-from pyprediktorutilites.send_email import SendEmail
+from pyprediktorutilities.send_email import SendEmail
 
 srv = "smtp.gmail.com"
 port = 587
@@ -60,8 +60,8 @@ def test_send_email_no_such_files():
 
 def test_mocked_send_email_forced_fail(mocker):
     # mock the smtplib.SMTP object
-    mock_SMTP = mocker.MagicMock(name="pyprediktorutilites.send_email.smtplib.SMTP")
-    mocker.patch("pyprediktorutilites.send_email.smtplib.SMTP", new=mock_SMTP)
+    mock_SMTP = mocker.MagicMock(name="pyprediktorutilities.send_email.smtplib.SMTP")
+    mocker.patch("pyprediktorutilities.send_email.smtplib.SMTP", new=mock_SMTP)
     mock_SMTP.side_effect = smtplib.SMTPException
     with pytest.raises(smtplib.SMTPException):
         SendEmail(srv, port, usr, pwd).send_email(sndr, rcpts, subj, body)

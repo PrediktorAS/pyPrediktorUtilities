@@ -2,7 +2,7 @@
 Contributing
 ============
 
-Welcome to ``pyPrediktorUtilites`` contributor's guide.
+Welcome to ``pyPrediktorUtilities`` contributor's guide.
 
 This document focuses on getting any potential contributor familiarized
 with the development processes, but `other kinds of contributions`_ are also
@@ -21,7 +21,7 @@ guidelines.
 Issue Reports
 =============
 
-If you experience bugs or general issues with ``pyPrediktorUtilites``, please have a look
+If you experience bugs or general issues with ``pyPrediktorUtilities``, please have a look
 on the `issue tracker`_. If you don't see anything useful there, please feel
 free to fire an issue report.
 
@@ -40,16 +40,16 @@ you help us to identify the root cause of the issue.
 Documentation Improvements
 ==========================
 
-You can help improve ``pyPrediktorUtilites`` docs by making them more readable and coherent, or
+You can help improve ``pyPrediktorUtilities`` docs by making them more readable and coherent, or
 by adding missing information and correcting mistakes.
 
-``pyPrediktorUtilites`` documentation uses Sphinx_ as its main documentation compiler.
+``pyPrediktorUtilities`` documentation uses Sphinx_ as its main documentation compiler.
 This means that the docs are kept in the same repository as the project code, and
 that any documentation update is done in the same way was a code contribution.
 
    .. tip::
       Please notice that the `GitHub web interface`_ provides a quick way of
-      propose changes in ``pyPrediktorUtilites``'s files. While this mechanism can
+      propose changes in ``pyPrediktorUtilities``'s files. While this mechanism can
       be tricky for normal code contributions, it works perfectly fine for
       contributing to the docs, and can be quite handy.
 
@@ -99,8 +99,8 @@ This can easily be done via either |virtualenv|_::
 
 or Miniconda_::
 
-    conda create -n pyPrediktorUtilites python=3 six virtualenv pytest pytest-cov
-    conda activate pyPrediktorUtilites
+    conda create -n pyPrediktorUtilities python=3 six virtualenv pytest pytest-cov
+    conda activate pyPrediktorUtilities
 
 Clone the repository
 --------------------
@@ -110,8 +110,8 @@ Clone the repository
    page. This creates a copy of the code under your account on |the repository service|.
 #. Clone this copy to your local disk::
 
-    git clone git@github.com:YourLogin/pyPrediktorUtilites.git
-    cd pyPrediktorUtilites
+    git clone git@github.com:YourLogin/pyPrediktorUtilities.git
+    cd pyPrediktorUtilities
 
 #. You should run::
 
@@ -126,7 +126,7 @@ Clone the repository
     pip install pre-commit
     pre-commit install
 
-   ``pyPrediktorUtilites`` comes with a lot of hooks configured to automatically help the
+   ``pyPrediktorUtilities`` comes with a lot of hooks configured to automatically help the
    developer to check the code being written.
 
 Implement your changes
@@ -253,7 +253,7 @@ Releases
 
 If you are part of the group of maintainers and have correct user permissions
 on PyPI_, the following steps can be used to release a new version for
-``pyPrediktorUtilites``:
+``pyPrediktorUtilities``:
 
 #. Make sure all unit tests are successful.
 #. Tag the current commit on the main branch with a release tag, e.g., ``v1.2.3``.
@@ -282,8 +282,8 @@ on PyPI_, the following steps can be used to release a new version for
 .. |the repository service| replace:: GitHub
 .. |contribute button| replace:: "Create pull request"
 
-.. _repository: https://github.com/<USERNAME>/pyPrediktorUtilites
-.. _issue tracker: https://github.com/<USERNAME>/pyPrediktorUtilites/issues
+.. _repository: https://github.com/<USERNAME>/pyPrediktorUtilities
+.. _issue tracker: https://github.com/<USERNAME>/pyPrediktorUtilities/issues
 .. <-- end -->
 
 
