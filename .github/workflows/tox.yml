@@ -25,9 +25,6 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install tox tox-gh-actions pytest
         python -m pip install -e .
-    - name: Test with pytest
-      run: |
-        pytest
     - name: Test with tox
       run: |
         tox
