@@ -1,4 +1,4 @@
-from pydantic import validate_call, NameEmail
+from pydantic import validate_call, EmailStr
 import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -44,7 +44,7 @@ class SendEmail:
         self.smtp_server_password = password
 
     @validate_call
-    def send_email(self, from_email: NameEmail, recipients: list[NameEmail], subject: str, body: str, files: list = []):
+    def send_email(self, from_email: EmailStr, recipients: list[EmailStr], subject: str, body: str, files: list = []):
         """_summary_
 
         Args:
@@ -62,6 +62,7 @@ class SendEmail:
         msg = MIMEMultipart()
         msg["From"] = str(from_email)
         msg["Subject"] = subject
+        msg["To"] = ', '.join(str(e) for e in recipients)
         msg.attach(MIMEText(body, "plain"))
 
         for file in files:
@@ -79,19 +80,19 @@ class SendEmail:
                 )
                 msg.attach(part)
 
-        for recipient in recipients:
-            msg["To"] = str(recipient)
-            text = msg.as_string()
-            try:
-                with smtplib.SMTP(self.smtp_server, self.smtp_server_port) as server:
-                    server.starttls()
-                    server.login(self.smtp_server_username, self.smtp_server_password)
-                    server.sendmail(self.smtp_server_username, str(recipient), text)
-                    logging.info(f"Email sent to {recipient} with subject {subject} and {len(files)} attachments")
-            except smtplib.SMTPException as e:
-                logging.error(f"Error: unable to send email to {recipient} with subject {subject} and {len(files)} attachments")
-                logging.error(e)
-                raise e
+
+        text = msg.as_string()
+        reciplist = [str(e) for e in recipients]
+        try:
+            with smtplib.SMTP(self.smtp_server, self.smtp_server_port) as server:
+                server.starttls()
+                server.login(self.smtp_server_username, self.smtp_server_password)
+                server.sendmail(str(from_email), reciplist, text)
+                logging.info(f"Email sent to {reciplist} with subject {subject} and {len(files)} attachments")
+        except smtplib.SMTPException as e:
+            logging.error(f"Error: unable to send email to {reciplist} with subject {subject} and {len(files)} attachments")
+            logging.error(e)
+            raise e
 
 
 if __name__ == "__main__":
