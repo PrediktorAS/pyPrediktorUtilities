@@ -34,7 +34,7 @@ def mocked_requests(*args, **kwargs):
     return MockResponse(None, 404)
 
 
-class AnalyticsHelperTestCase(unittest.TestCase):
+class SharedFunctionsTestCase(unittest.TestCase):
     def test_requests_with_malformed_url(self):
         with pytest.raises(ValidationError):
             request_from_api(rest_url="No_valid_url", method="GET", endpoint="/")
