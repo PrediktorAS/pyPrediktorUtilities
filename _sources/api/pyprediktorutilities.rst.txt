@@ -4,10 +4,26 @@ pyprediktorutilities package
 Submodules
 ----------
 
+pyprediktorutilities.file\_transfer module
+------------------------------------------
+
+.. automodule:: pyprediktorutilities.file_transfer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 pyprediktorutilities.send\_email module
 ---------------------------------------
 
 .. automodule:: pyprediktorutilities.send_email
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pyprediktorutilities.shared module
+----------------------------------
+
+.. automodule:: pyprediktorutilities.shared
    :members:
    :undoc-members:
    :show-inheritance:
