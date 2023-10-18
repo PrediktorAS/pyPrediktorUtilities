@@ -6,7 +6,7 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 import os
-from pathlib import Path
+from pyprediktorutilities.shared import validate_file
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -66,9 +66,7 @@ class SendEmail:
         msg.attach(MIMEText(body, "plain"))
 
         for file in files:
-            if not Path(file).is_file():
-                logging.error(f"File {file} does not exist")
-                raise FileNotFoundError(f"File {file} does not exist")
+            validate_file(file)
             
             with open(file, "rb") as f:
                 part = MIMEBase("application", "octet-stream")
