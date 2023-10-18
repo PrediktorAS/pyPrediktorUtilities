@@ -1,4 +1,4 @@
-from pydantic import validate_call, AnyUrl
+from pydantic import validate_call
 import os
 import logging
 import paramiko
@@ -21,7 +21,7 @@ class SFTPClient:
         Object: SFTPClient object
     """
     @validate_call
-    def __init__(self, server: AnyUrl, username: str, password: str, port: int) -> object:
+    def __init__(self, server: str, username: str, password: str, port: int) -> object:
         self.server = server
         self.username = username
         self.password = password
@@ -36,6 +36,9 @@ class SFTPClient:
             files (list[str]): _description_
             remote_directory (str): _description_
         """
+        
+        if not files:
+            raise FileNotFoundError("No files to upload")
         
         for file in files:
             validate_file(file)

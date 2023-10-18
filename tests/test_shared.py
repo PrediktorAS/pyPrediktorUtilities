@@ -4,7 +4,7 @@ import requests
 import pytest
 from pydantic import ValidationError
 
-from pyprediktorutilities.shared import request_from_api
+from pyprediktorutilities.shared import request_from_api, validate_file
 
 URL = "http://someserver.somedomain.com/v1/"
 return_json = [
@@ -55,6 +55,12 @@ class SharedFunctionsTestCase(unittest.TestCase):
         )
         assert result == return_json
 
+    def test_validate_file_with_non_existing_file(self):
+        with pytest.raises(FileNotFoundError):
+            validate_file(file="No_such_file")
+
+    def test_validate_file_with_existing_file(self):
+        validate_file(file="tests/test_shared.py")
 
 if __name__ == "__main__":
     unittest.main()
