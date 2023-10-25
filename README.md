@@ -15,6 +15,8 @@ working with Prediktor projects. The main features are:
 Install is primarily done through PyPi with `pip install pyPrediktorUtilities`. If you want to contribute or need
 run the Jupyter Notebooks in the `notebooks` folder locally, please clone this repository.
 
+Read the documentation here: [https://prediktoras.github.io/pyPrediktorUtilities/](https://prediktoras.github.io/pyPrediktorUtilities/)
+
 ## Setup to Install
 1. First clone the repository and navigate to the main folder of repository.
 ```

@@ -2,6 +2,7 @@ import sys
 from .shared import *
 from .send_email import *
 from .file_transfer import *
+from .templating import *
 
 if sys.version_info[:2] >= (3, 9):
     # TODO: Import directly (no need for conditional) when `python_requires = >= 3.9`
