@@ -28,6 +28,14 @@ pyprediktorutilities.shared module
    :undoc-members:
    :show-inheritance:
 
+pyprediktorutilities.templating module
+--------------------------------------
+
+.. automodule:: pyprediktorutilities.templating
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

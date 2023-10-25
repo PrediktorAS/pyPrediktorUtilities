@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <title>Templating &#8212; pyPrediktorUtilities 0.2.1.post1.dev1+g3ece7dd documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=233b9934" />
+    <script src="_static/documentation_options.js?v=8e31080c"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="pyprediktorutilities" href="api/modules.html" />
+    <link rel="prev" title="License" href="license.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="templating">
+<span id="id1"></span><h1>Templating<a class="headerlink" href="#templating" title="Link to this heading">¶</a></h1>
+<p>Sometimes you want to generate a big chunk of text containing a lot of
+variables.  For example, you might want to generate an XML file or a
+HTML page.  The <cite>Templating</cite> class provides a simple way to create such
+text.</p>
+<p>Consider the following example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;person&gt;
+    &lt;name&gt;John Doe&lt;/name&gt;
+    &lt;age&gt;42&lt;/age&gt;
+&lt;/person&gt;
+</pre></div>
+</div>
+<p>This is a simple XML file. If you wanted to generate this file using
+content from e.g. a database where you could be receiving any number of
+different names and ages, you would have to do a lot of string
+manipulation to get the desired result.  The <cite>Templating</cite> class makes
+this easy with the help of the library Jinja2.</p>
+<p>First, create your template file and put it in a folder for templates:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+{% for person in persons -%}
+&lt;person&gt;
+    &lt;name&gt;{{ name }}&lt;/name&gt;
+    &lt;age&gt;{{ age }}&lt;/age&gt;
+&lt;/person&gt;
+{% endfor -%}
+</pre></div>
+</div>
+<p>The template file is a normal XML file, but it contains some special
+tags that are used by Jinja2.  The <code class="docutils literal notranslate"><span class="pre">{%</span> <span class="pre">for</span> <span class="pre">person</span> <span class="pre">in</span> <span class="pre">persons</span> <span class="pre">-%}</span></code> tag
+starts a loop that will iterate over all the persons in the <code class="docutils literal notranslate"><span class="pre">persons</span></code>
+list.  The <code class="docutils literal notranslate"><span class="pre">{%</span> <span class="pre">endfor</span> <span class="pre">-%}</span></code> tag ends the loop.  The <code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">name</span> <span class="pre">}}</span></code> and
+<code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">age</span> <span class="pre">}}</span></code> tags are replaced with the values of the <code class="docutils literal notranslate"><span class="pre">name</span></code> and
+<code class="docutils literal notranslate"><span class="pre">age</span></code> variables.</p>
+<p>Using this in Python, you would do something like this (assuming you
+have put the above template in a file called <code class="docutils literal notranslate"><span class="pre">person.xml</span></code> in a folder
+called <code class="docutils literal notranslate"><span class="pre">/tmp/templates</span></code>):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pyprediktorutilities.templating</span> <span class="kn">import</span> <span class="n">Templating</span>
+
+<span class="n">template</span> <span class="o">=</span> <span class="n">Templating</span><span class="p">(</span><span class="s2">&quot;/tmp/templates&quot;</span><span class="p">)</span>
+<span class="n">persons</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;John Doe&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="mi">42</span><span class="p">},</span>
+           <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Jane Doe&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="mi">43</span><span class="p">}]</span>
+<span class="n">xml</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="s2">&quot;person.xml&quot;</span><span class="p">,</span> <span class="n">persons</span><span class="o">=</span><span class="n">persons</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">xml</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This would return the following string:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;person&gt;
+    &lt;name&gt;John Doe&lt;/name&gt;
+    &lt;age&gt;42&lt;/age&gt;
+&lt;/person&gt;
+&lt;person&gt;
+    &lt;name&gt;Jane Doe&lt;/name&gt;
+    &lt;age&gt;43&lt;/age&gt;
+&lt;/person&gt;
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">render</span></code> method takes the name of the template file as the first
+argument.  The second argument is a dictionary containing the variables.</p>
+<p>If you want to output the result to a file instead of a string, you can
+use the <code class="docutils literal notranslate"><span class="pre">render_to_file</span></code> method, which is similar to the <code class="docutils literal notranslate"><span class="pre">render</span></code>
+method, but takes a file path as the second argument after the template.</p>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">pyPrediktorUtilities</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributions &amp; Help</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Templating</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/modules.html">Module Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="license.html" title="previous chapter">License</a></li>
+      <li>Next: <a href="api/modules.html" title="next chapter">pyprediktorutilities</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Andreas Lydersen.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="_sources/templating.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

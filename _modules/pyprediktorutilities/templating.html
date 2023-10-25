@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pyprediktorutilities.templating &#8212; pyPrediktorUtilities 0.2.1.post1.dev1+g3ece7dd documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=233b9934" />
+    <script src="../../_static/documentation_options.js?v=8e31080c"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for pyprediktorutilities.templating</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">jinja2</span> <span class="kn">import</span> <span class="n">Environment</span><span class="p">,</span> <span class="n">FileSystemLoader</span><span class="p">,</span> <span class="n">select_autoescape</span><span class="p">,</span> <span class="n">StrictUndefined</span>
+<span class="kn">from</span> <span class="nn">pyprediktorutilities.shared</span> <span class="kn">import</span> <span class="n">validate_folder</span><span class="p">,</span> <span class="n">validate_file</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">NullHandler</span><span class="p">())</span>
+
+
+<div class="viewcode-block" id="Templating">
+<a class="viewcode-back" href="../../api/pyprediktorutilities.html#pyprediktorutilities.templating.Templating">[docs]</a>
+<span class="k">class</span> <span class="nc">Templating</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Simple wrapper around a templating engine, allowing for easy rendering of templates</span>
+<span class="sd">    such as XMLs and HTMLs. Build on top of Jinja2</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        path (str): The path to the folder containing the templates</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        path (str): The path to the folder containing the templates</span>
+<span class="sd">        env (jinja2.Environment): The environment to use for rendering</span>
+<span class="sd">    </span>
+<span class="sd">    Raises:</span>
+<span class="sd">        FileNotFoundError: If the folder does not exist</span>
+<span class="sd">        FileNotFoundError: If the template does not exist</span>
+<span class="sd">        Exception: If the template could not be rendered</span>
+<span class="sd">    </span>
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; from pyprediktorutilities.templating import Templating</span>
+<span class="sd">        &gt;&gt;&gt; templating = Templating(&#39;templates&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; templates = templating.list_templates()</span>
+<span class="sd">        &gt;&gt;&gt; template = templating.load_template(&#39;base.html&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; rendered_template = templating.render(template, title=&#39;Home&#39;)</span>
+<span class="sd">        &gt;&gt;&gt; templating.render_to_file(template, &#39;output.html&#39;, title=&#39;Home&#39;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Class initialization</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            path (str): The path to the folder containing the templates</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            FileNotFoundError: If the folder does not exist</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            object: Templating object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>
+        <span class="c1"># Check if folder exists</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">validate_folder</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="n">errormsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Folder </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> does not exist&quot;</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errormsg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="n">errormsg</span><span class="p">)</span>
+        
+        <span class="c1"># Establish the environment</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env</span> <span class="o">=</span> <span class="n">Environment</span><span class="p">(</span>
+            <span class="n">loader</span><span class="o">=</span><span class="n">FileSystemLoader</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">autoescape</span><span class="o">=</span><span class="n">select_autoescape</span><span class="p">(),</span> <span class="n">undefined</span><span class="o">=</span><span class="n">StrictUndefined</span>
+        <span class="p">)</span>
+        
+<div class="viewcode-block" id="Templating.list_templates">
+<a class="viewcode-back" href="../../api/pyprediktorutilities.html#pyprediktorutilities.templating.Templating.list_templates">[docs]</a>
+    <span class="k">def</span> <span class="nf">list_templates</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a list of templates in the folder</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[str]: A list of strings containing the template names</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">list_templates</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Templating.load_template">
+<a class="viewcode-back" href="../../api/pyprediktorutilities.html#pyprediktorutilities.templating.Templating.load_template">[docs]</a>
+    <span class="k">def</span> <span class="nf">load_template</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">template</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Loads a template from the folder</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            template (str): The file name of the template to load</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            FileNotFoundError: If the template does not exist</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            object: The template object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check if template exists</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">validate_file</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">template</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+            <span class="n">errormsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Template </span><span class="si">{</span><span class="n">template</span><span class="si">}</span><span class="s2"> not found in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errormsg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="n">errormsg</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="n">template</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Templating.render">
+<a class="viewcode-back" href="../../api/pyprediktorutilities.html#pyprediktorutilities.templating.Templating.render">[docs]</a>
+    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">template</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Render a template with the given arguments and return a string</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            template (str): The file name of the template to load</span>
+<span class="sd">            **kwargs: The arguments to pass to the template</span>
+<span class="sd">            </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            Exception: If the template could not be rendered</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: The rendered template</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">template</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">get_template</span><span class="p">(</span><span class="n">template</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">template</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">errormsg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Could not render </span><span class="si">{</span><span class="n">template</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errormsg</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">errormsg</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="Templating.render_to_file">
+<a class="viewcode-back" href="../../api/pyprediktorutilities.html#pyprediktorutilities.templating.Templating.render_to_file">[docs]</a>
+    <span class="k">def</span> <span class="nf">render_to_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">template</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Render a template with the given arguments and write to a file</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            template (str): The file name of the template to load</span>
+<span class="sd">            file (str): The path and file name of the file to write to</span>
+<span class="sd">            **kwargs: The arguments to pass to the template</span>
+<span class="sd">        </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            Exception: If the template could not be rendered</span>
+<span class="sd">            FileNotFoundError: If the template does not exist</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            None: None            </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">pyPrediktorUtilities</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../readme.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributions &amp; Help</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../license.html">License</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../templating.html">Templating</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">Module Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Andreas Lydersen.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
