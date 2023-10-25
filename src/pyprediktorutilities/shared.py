@@ -7,12 +7,19 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+@validate_call
+def validate_folder(folder: str):
+    if not Path(folder).is_dir():
+        errormsg = f"Folder {folder} does not exist"
+        logging.error(errormsg)
+        raise FileNotFoundError(errormsg)
 
 @validate_call
 def validate_file(file: str):
     if not Path(file).is_file():
-        logging.error(f"File {file} does not exist")
-        raise FileNotFoundError(f"File {file} does not exist")
+        errormsg = f"File {file} does not exist"
+        logging.error(errormsg)
+        raise FileNotFoundError(errormsg)
 
 
 @validate_call
