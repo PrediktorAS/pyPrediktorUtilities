@@ -13,6 +13,7 @@ Contents
    Overview <readme>
    Contributions & Help <contributing>
    License <license>
+   Sending emails <emailing>
    Templating <templating>
    Module Reference <api/modules>
 
