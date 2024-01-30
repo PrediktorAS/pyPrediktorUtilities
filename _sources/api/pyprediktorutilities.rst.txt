@@ -4,6 +4,14 @@ pyprediktorutilities package
 Submodules
 ----------
 
+pyprediktorutilities.dwh module
+-------------------------------
+
+.. automodule:: pyprediktorutilities.dwh
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 pyprediktorutilities.file\_transfer module
 ------------------------------------------
 
