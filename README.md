@@ -147,3 +147,17 @@ dwh = Dwh("localhost", "mydatabase", "myusername", "mypassword")
 results = dwh.fetch("SELECT * FROM mytable")
 dwh.execute("INSERT INTO mytable VALUES (1, 'test')")
 ```
+
+# TODOs
+
+1. In `setup.cfg` file there is the following code snipped:
+
+```
+install_requires =
+    pytest
+    pytest-cov
+    pytest-mock
+    pyarrow
+```
+
+Install these packages only when testing and build the documentation via `tox -e docs`. Do not install them on production.
