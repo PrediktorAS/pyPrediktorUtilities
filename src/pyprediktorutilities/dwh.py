@@ -4,6 +4,8 @@ import pandas as pd
 from typing import List, Any
 from pydantic import validate_call
 
+from pyprediktorutilities import singleton_class
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -302,3 +304,11 @@ class Dwh:
     def __commit(self) -> None:
         """Commits any changes to the database."""
         self.connection.commit()
+
+
+class DwhSingleton(Dwh, metaclass=singleton_class.SingletonMeta):
+    pass
+
+
+def get_dwh_instance(*args, **kwargs):
+    return DwhSingleton(*args, **kwargs)
