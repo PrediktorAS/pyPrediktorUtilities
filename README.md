@@ -141,7 +141,7 @@ dwh = Dwh(SQL_SERVER, SQL_DATABASE, SQL_USER, SQL_PASSWORD, driver_index)
 ## Example usage
 
 ```
-from pyprediktorutilities.dwh import Dwh
+from pyprediktorutilities.dwh.dwh import Dwh
 
 dwh = Dwh("localhost", "mydatabase", "myusername", "mypassword")
 results = dwh.fetch("SELECT * FROM mytable")
