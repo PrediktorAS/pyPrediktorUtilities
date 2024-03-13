@@ -89,7 +89,10 @@ Also, make sure to run these commands within the activated tox environment.
 
 ## Introduction
 
-Helper functions to access a PowerView Data Warehouse or other SQL databases. This class is a wrapper around pyodbc and you can use all pyodbc methods as well as those provided by pyodbc. Look at the pyodbc documentation and use the cursor attribute to access the pyodbc cursor.
+Helper functions to access a PowerView Data Warehouse or other SQL databases.
+This class is a wrapper around pyodbc and you can use all pyodbc methods as well as those provided by pyodbc. Look at the pyodbc documentation and use the cursor attribute to access the pyodbc cursor.
+You can use it as a singleton or as a regular object. If you need to access only one database in the entire application,
+you should use the singleton version.
 
 ## Requirements
 
@@ -106,6 +109,8 @@ When initialising Dwh you have to pass the patameters below following the same o
 
 ```
 dwh = Dwh(SQL_SERVER, SQL_DATABASE, SQL_USER, SQL_PASSWORD)
+# or
+dwh = DwhSingleton(SQL_SERVER, SQL_DATABASE, SQL_USER, SQL_PASSWORD)
 ```
 
 There is fifth parameter `SQL_DRIVER_INDEX` but it is not required. If you do not pass the driver index, pyPrediktorMapClient is going to check two things:
@@ -141,7 +146,7 @@ dwh = Dwh(SQL_SERVER, SQL_DATABASE, SQL_USER, SQL_PASSWORD, driver_index)
 ## Example usage
 
 ```
-from pyprediktorutilities.dwh import Dwh
+from pyprediktorutilities.dwh.dwh import Dwh
 
 dwh = Dwh("localhost", "mydatabase", "myusername", "mypassword")
 results = dwh.fetch("SELECT * FROM mytable")

@@ -1,6 +1,5 @@
 import unittest
 from unittest import mock
-import requests
 import pytest
 from pydantic import ValidationError
 
@@ -16,6 +15,7 @@ return_json = [
         "Vars": [],
     }
 ]
+
 
 # This method will be used by the mock to replace requests
 def mocked_requests(*args, **kwargs):
