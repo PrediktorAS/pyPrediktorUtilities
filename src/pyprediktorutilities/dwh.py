@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
-class Dwh:
+class Dwh(metaclass=singleton_class.SingletonMeta):
     """Access a PowerView Data Warehouse or other SQL databases.
 
     Args:
@@ -304,11 +304,3 @@ class Dwh:
     def __commit(self) -> None:
         """Commits any changes to the database."""
         self.connection.commit()
-
-
-class DwhSingleton(Dwh, metaclass=singleton_class.SingletonMeta):
-    pass
-
-
-def get_dwh_instance(*args, **kwargs):
-    return DwhSingleton(*args, **kwargs)

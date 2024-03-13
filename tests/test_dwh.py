@@ -6,7 +6,7 @@ import logging
 import pandas as pd
 
 from unittest.mock import Mock
-from pyprediktorutilities.dwh import Dwh, get_dwh_instance
+from pyprediktorutilities.dwh import Dwh
 from pandas.testing import assert_frame_equal
 
 """
@@ -797,10 +797,10 @@ def test_dwh_singleton_can_be_created_only_once(monkeypatch):
         "pyprediktorutilities.dwh.pyodbc.connect", mock_pyodbc_connection
     )
 
-    db = get_dwh_instance(grs(), grs(), grs(), grs(), driver_index)
+    db = Dwh(grs(), grs(), grs(), grs(), driver_index)
     db_instance_address = id(db)
 
-    db_2 = get_dwh_instance(grs(), grs(), grs(), grs(), driver_index)
+    db_2 = Dwh(grs(), grs(), grs(), grs(), driver_index)
     db_2_instance_address = id(db_2)
 
     assert db_instance_address == db_2_instance_address
