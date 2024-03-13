@@ -1,16 +1,16 @@
 pyprediktorutilities package
 ============================
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   pyprediktorutilities.dwh
+
 Submodules
 ----------
-
-pyprediktorutilities.dwh module
--------------------------------
-
-.. automodule:: pyprediktorutilities.dwh
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 pyprediktorutilities.file\_transfer module
 ------------------------------------------
@@ -32,6 +32,14 @@ pyprediktorutilities.shared module
 ----------------------------------
 
 .. automodule:: pyprediktorutilities.shared
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pyprediktorutilities.singleton module
+-------------------------------------
+
+.. automodule:: pyprediktorutilities.singleton
    :members:
    :undoc-members:
    :show-inheritance:

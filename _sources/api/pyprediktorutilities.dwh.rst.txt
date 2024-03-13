@@ -1,0 +1,29 @@
+pyprediktorutilities.dwh package
+================================
+
+Submodules
+----------
+
+pyprediktorutilities.dwh.dwh module
+-----------------------------------
+
+.. automodule:: pyprediktorutilities.dwh.dwh
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+pyprediktorutilities.dwh.dwh\_singleton module
+----------------------------------------------
+
+.. automodule:: pyprediktorutilities.dwh.dwh_singleton
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: pyprediktorutilities.dwh
+   :members:
+   :undoc-members:
+   :show-inheritance:
