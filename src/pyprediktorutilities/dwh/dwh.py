@@ -54,6 +54,7 @@ class Dwh:
             + f"DRIVER={self.driver};"
             + f"SERVER={self.url};"
             + f"DATABASE={self.database};"
+            + "TrustServerCertificate=yes;"
         )
         self.connection_attempts = 3
 
