@@ -58,9 +58,8 @@ class Dwh:
         )
         self.connection_attempts = 3
 
-        self.__connect()
-
     def __enter__(self):
+        self.__connect()
         return self
 
     @validate_call
@@ -115,6 +114,7 @@ class Dwh:
             if not self.cursor.nextset():
                 break
 
+        self.__disconnect()  # prevent from leaving open transactions in DWH
         return data_sets if len(data_sets) > 1 else data_sets[0]
 
     @validate_call
@@ -151,7 +151,7 @@ class Dwh:
             pass
 
         self.__commit()
-
+        self.__disconnect()  # prevent from leaving open transactions in DWH
         return result
 
     """
@@ -226,7 +226,7 @@ class Dwh:
             try:
                 self.connection = pyodbc.connect(self.connection_string)
                 self.cursor = self.connection.cursor()
-                logging.info("Connection successfull!")
+                logging.info("Connection successful!")
                 break
 
             # Exceptions once thrown there is no point attempting

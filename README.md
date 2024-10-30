@@ -33,11 +33,13 @@ source .venv/bin/activate
 ```
 
 3. Install dependencies
-   As this is a python package, dependencies are in setyp.py (actually in setup.cfg, as this is a pyScaffold project). Requirements.txt will perform the correct installation and add a couple of
-   additional packages
+   As this is a python package, dependencies are in setup.py (actually in setup.cfg, as this is a pyScaffold project). 
+   Requirements.txt will perform the correct installation and add a couple of additional packages.
+   The second command installs the packages required for running tests.
 
 ```
 pip install -r requirements.txt
+pip install -e ".[testing]"
 ```
 
 4. Run tests

@@ -35,7 +35,7 @@ def test_init_when_instantiate_db_but_no_pyodbc_drivers_available_then_throw_exc
     assert "Driver index 0 is out of range." in str(excinfo.value)
 
 
-def test_init_when_instantiate_db_but_pyodbc_throws_error_with_tolerance_to_attempts_then_throw_exception(
+def test_use_as_context_when_instantiate_db_but_pyodbc_throws_error_with_tolerance_to_attempts_then_throw_exception(
     monkeypatch,
 ):
     driver_index = 0
@@ -47,10 +47,13 @@ def test_init_when_instantiate_db_but_pyodbc_throws_error_with_tolerance_to_atte
     )
 
     with pytest.raises(pyodbc.DataError):
-        Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index)
+        with Dwh(
+            helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
+        ):
+            pass
 
 
-def test_init_when_instantiate_db_but_pyodbc_throws_error_tolerant_to_attempts_then_retry_connecting_and_throw_exception(
+def test_use_as_context_when_instantiate_db_but_pyodbc_throws_error_tolerant_to_attempts_then_retry_connecting_and_throw_exception(
     caplog, monkeypatch
 ):
     driver_index = 0
@@ -63,7 +66,10 @@ def test_init_when_instantiate_db_but_pyodbc_throws_error_tolerant_to_attempts_t
 
     with caplog.at_level(logging.ERROR):
         with pytest.raises(pyodbc.DatabaseError):
-            Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index)
+            with Dwh(
+                helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
+            ):
+                pass
 
     assert any(
         "Failed to connect to the DataWarehouse after 3 attempts." in message
@@ -91,7 +97,7 @@ fetch
 """
 
 
-def test_fetch_when_init_db_connection_is_successfull_but_fails_when_calling_fetch_then_throw_exception(
+def test_use_as_context_when_init_db_connection_is_successfull_but_fails_when_calling_fetch_then_throw_exception(
     monkeypatch,
 ):
     query = "SELECT * FROM mytable"
@@ -115,9 +121,13 @@ def test_fetch_when_init_db_connection_is_successfull_but_fails_when_calling_fet
     )
 
     with pytest.raises(pyodbc.DataError):
-        db = Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index)
-        db.connection = False
-        db.fetch(query)
+        with Dwh(
+            helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
+        ) as db:
+            db.connection = False
+            db.fetch(query)
+
+    assert db.connection is None
 
 
 def test_fetch_when_to_dataframe_is_false_and_no_data_is_returned_then_return_empty_list(
@@ -153,6 +163,7 @@ def test_fetch_when_to_dataframe_is_false_and_no_data_is_returned_then_return_em
 
     mock_cursor.execute.assert_called_once_with(query)
     assert actual_result == expected_result
+    assert db.connection is None
 
 
 def test_fetch_when_to_dataframe_is_false_and_single_data_set_is_returned_then_return_list_representing_single_data_set(
@@ -245,6 +256,7 @@ def test_fetch_when_to_dataframe_is_false_and_single_data_set_is_returned_then_r
 
     mock_cursor.execute.assert_called_once_with(query)
     assert actual_result == expected_result
+    assert db.connection is None
 
 
 def test_fetch_when_to_dataframe_is_false_and_multiple_data_sets_are_returned_then_return_list_of_lists_representing_multiple_data_sets(
@@ -382,6 +394,7 @@ def test_fetch_when_to_dataframe_is_false_and_multiple_data_sets_are_returned_th
 
     mock_cursor.execute.assert_called_once_with(query)
     assert actual_result == expected_result
+    assert db.connection is None
 
 
 def test_fetch_when_to_dataframe_is_true_and_no_data_is_returned_then_return_empty_dataframe(
@@ -415,6 +428,7 @@ def test_fetch_when_to_dataframe_is_true_and_no_data_is_returned_then_return_emp
 
     mock_cursor.execute.assert_called_once_with(query)
     assert actual_result.empty
+    assert db.connection is None
 
 
 def test_fetch_when_to_dataframe_is_true_and_single_data_set_is_returned_then_return_dataframe(
@@ -512,6 +526,7 @@ def test_fetch_when_to_dataframe_is_true_and_single_data_set_is_returned_then_re
         expected_df.reset_index(drop=True),
         check_dtype=False,
     )
+    assert db.connection is None
 
 
 def test_fetch_when_to_dataframe_is_true_and_multiple_data_sets_are_returned_then_return_list_of_dataframes_representing_multiple_data_sets(
@@ -658,6 +673,7 @@ def test_fetch_when_to_dataframe_is_true_and_multiple_data_sets_are_returned_the
         expected_df_set_two,
         check_dtype=False,
     )
+    assert db.connection is None
 
 
 """
@@ -665,7 +681,7 @@ execute
 """
 
 
-def test_execute_when_init_db_connection_is_successfull_but_fails_when_calling_execute_then_throw_exception(
+def test_execute_when_init_db_connection_is_successful_but_fails_when_calling_execute_then_throw_exception(
     monkeypatch,
 ):
     query = "INSERT INTO mytable VALUES (1, 'test')"
@@ -689,9 +705,12 @@ def test_execute_when_init_db_connection_is_successfull_but_fails_when_calling_e
     )
 
     with pytest.raises(pyodbc.DataError):
-        db = Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index)
-        db.connection = False
-        db.execute(query)
+        with Dwh(
+            helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
+        ) as db:
+            db.connection = False
+            db.execute(query)
+            assert db.connection is None
 
 
 def test_execute_when_parameter_passed_then_fetch_results_and_return_data(monkeypatch):
@@ -725,6 +744,7 @@ def test_execute_when_parameter_passed_then_fetch_results_and_return_data(monkey
     mock_execute.assert_called_once_with(query, param_one, param_two)
     mock_fetch.assert_called_once()
     assert actual_result == expected_result
+    assert db.connection is None
 
 
 def test_execute_when_fetchall_throws_error_then_return_empty_list(monkeypatch):
@@ -757,3 +777,4 @@ def test_execute_when_fetchall_throws_error_then_return_empty_list(monkeypatch):
     mock_execute.assert_called_once_with(query, param_one, param_two)
     mock_fetchall.assert_called_once()
     assert actual_result == []
+    assert db.connection is None
