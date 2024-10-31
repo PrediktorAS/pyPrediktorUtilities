@@ -46,6 +46,7 @@ class Dwh:
         self.username = username
         self.password = password
         self.connection = None
+
         self.__set_driver(driver_index)
 
         self.connection_string = (
@@ -101,15 +102,13 @@ class Dwh:
 
         data_sets = []
         while True:
-            data_set = []
-
             columns = [col[0] for col in self.cursor.description]
-            for row in self.cursor.fetchall():
-                data_set.append(
-                    {name: row[index] for index, name in enumerate(columns)}
-                )
+            data_set = [dict(zip(columns, row)) for row in self.cursor.fetchall()]
 
-            data_sets.append(pd.DataFrame(data_set) if to_dataframe else data_set)
+            if to_dataframe:
+                data_sets.append(pd.DataFrame(data_set, columns=columns))
+            else:
+                data_sets.append(data_set)
 
             if not self.cursor.nextset():
                 break
@@ -142,13 +141,12 @@ class Dwh:
             List[Any]: The results of the query.
         """
         self.__connect()
-        self.cursor.execute(query, *args, **kwargs)
-
-        result = []
         try:
+            self.cursor.execute(query, *args, **kwargs)
             result = self.cursor.fetchall()
-        except Exception:
-            pass
+        except Exception as e:
+            logging.error(f"Failed to execute query: {e}")
+            return []
 
         self.__commit()
         self.__disconnect()  # prevent from leaving open transactions in DWH
@@ -160,52 +158,56 @@ class Dwh:
 
     @validate_call
     def __set_driver(self, driver_index: int) -> None:
-        """Sets the driver to use for the connection to the database.
+        """Sets the driver for the database connection.
 
         Args:
-            driver (int): The index of the driver to use. If the index is -1 or
+            driver (int): Index of the driver in the list of available drivers. If the index is -1 or
                 in general below 0, pyPrediktorMapClient is going to choose
                 the driver for you.
-        """
-        if driver_index < 0:
-            drivers = self.__get_list_of_available_and_supported_pyodbc_drivers()
-            if len(drivers) > 0:
-                self.driver = drivers[0]
-            return
 
-        if self.__get_number_of_available_pyodbc_drivers() < (driver_index + 1):
+        Raises:
+            ValueError: If no valid driver is found.
+        """
+        available_drivers = self.__get_list_of_available_and_supported_pyodbc_drivers()
+
+        if not available_drivers:
+            raise ValueError("No supported ODBC drivers found.")
+
+        if driver_index < 0:
+            self.driver = available_drivers[0]
+        elif driver_index >= len(available_drivers):
             raise ValueError(
                 f"Driver index {driver_index} is out of range. Please use "
-                + f"the __get_list_of_available_pyodbc_drivers() method "
-                + f"to list all available drivers."
+                f"the __get_list_of_available_and_supported_pyodbc_drivers() method "
+                f"to list all available drivers."
             )
-
-        self.driver = self.__get_list_of_supported_pyodbc_drivers()[driver_index]
-
-    @validate_call
-    def __get_number_of_available_pyodbc_drivers(self) -> int:
-        return len(self.__get_list_of_supported_pyodbc_drivers())
+        else:
+            self.driver = available_drivers[driver_index]
 
     @validate_call
     def __get_list_of_supported_pyodbc_drivers(self) -> List[Any]:
         return pyodbc.drivers()
 
     @validate_call
-    def __get_list_of_available_and_supported_pyodbc_drivers(self) -> List[Any]:
+    def __get_list_of_available_and_supported_pyodbc_drivers(
+        self,
+    ) -> List[Any]:
         available_drivers = []
-        for driver in self.__get_list_of_supported_pyodbc_drivers():
+        supported_drivers = self.__get_list_of_supported_pyodbc_drivers()
+
+        for driver in supported_drivers:
             try:
-                pyodbc.connect(
+                connection_string = (
                     f"UID={self.username};"
                     + f"PWD={self.password};"
                     + f"DRIVER={driver};"
                     + f"SERVER={self.url};"
-                    + f"DATABASE={self.database};",
-                    timeout=3,
+                    + f"DATABASE={self.database};"
                 )
+                pyodbc.connect(connection_string, timeout=3)
                 available_drivers.append(driver)
-            except pyodbc.Error as e:
-                pass
+            except pyodbc.Error as err:
+                logger.info(f"Driver {driver} could not connect: {err}")
 
         return available_drivers
 
@@ -225,54 +227,61 @@ class Dwh:
         while attempt < self.connection_attempts:
             try:
                 self.connection = pyodbc.connect(self.connection_string)
-                self.cursor = self.connection.cursor()
-                logging.info("Connection successful!")
-                break
+                if self.connection:
+                    self.cursor = self.connection.cursor()
+                    logging.info(f"Connected to the database on attempt {attempt + 1}")
+                    return
+                else:
+                    logging.info(f"Connection is None on attempt {attempt + 1}")
+                    raise pyodbc.Error("Failed to connect to the database")
 
             # Exceptions once thrown there is no point attempting
-            except pyodbc.DataError as err:
-                logger.error(f"Data Error {err.args[0]}: {err.args[1]}")
-                raise
-            except pyodbc.IntegrityError as err:
-                logger.error(f"Integrity Error {err.args[0]}: {err.args[1]}")
-                raise
             except pyodbc.ProgrammingError as err:
-                logger.error(f"Programming Error {err.args[0]}: {err.args[1]}")
+                logger.error(
+                    f"Programming Error {err.args[0] if err.args else 'No code'}: {err.args[1] if len(err.args) > 1 else 'No message'}"
+                )
                 logger.warning(
-                    f"There seems to be a problem with your code. Please "
-                    + f"check your code and try again."
+                    "There seems to be a problem with your code. Please "
+                    "check your code and try again."
                 )
                 raise
-            except pyodbc.NotSupportedError as err:
-                logger.error(f"Not supported {err.args[0]}: {err.args[1]}")
+
+            except (
+                pyodbc.DataError,
+                pyodbc.IntegrityError,
+                pyodbc.NotSupportedError,
+            ) as err:
+                logger.error(
+                    f"{type(err).__name__} {err.args[0] if err.args else 'No code'}: {err.args[1] if len(err.args) > 1 else 'No message'}"
+                )
                 raise
 
             # Exceptions when thrown we can continue attempting
             except pyodbc.OperationalError as err:
-                logger.error(f"Operational Error {err.args[0]}: {err.args[1]}")
-                logger.warning(
-                    f"Pyodbc is having issues with the connection. This "
-                    + f"could be due to the wrong driver being used. Please "
-                    + f"check your driver with "
-                    + f"the __get_list_of_available_and_supported_pyodbc_drivers() method "
-                    + f"and try again."
+                logger.error(
+                    f"Operational Error: {err.args[0] if err.args else 'No code'}: {err.args[1] if len(err.args) > 1 else 'No message'}"
                 )
-
+                logger.warning(
+                    "Pyodbc is having issues with the connection. This "
+                    "could be due to the wrong driver being used. Please "
+                    "check your driver with "
+                    "the __get_list_of_available_and_supported_pyodbc_drivers() method "
+                    "and try again."
+                )
                 attempt += 1
                 if self.__are_connection_attempts_reached(attempt):
-                    raise
-            except pyodbc.DatabaseError as err:
-                logger.error(f"Database Error {err.args[0]}: {err.args[1]}")
+                    break
 
+            except (pyodbc.DatabaseError, pyodbc.Error) as err:
+                logger.error(
+                    f"{type(err).__name__} {err.args[0] if err.args else 'No code'}: {err.args[1] if len(err.args) > 1 else 'No message'}"
+                )
                 attempt += 1
                 if self.__are_connection_attempts_reached(attempt):
-                    raise
-            except pyodbc.Error as err:
-                logger.error(f"Generic Error {err.args[0]}: {err.args[1]}")
+                    break
 
-                attempt += 1
-                if self.__are_connection_attempts_reached(attempt):
-                    raise
+        if not self.connection:
+            raise pyodbc.Error("Failed to connect to the database")
 
     @validate_call
     def __are_connection_attempts_reached(self, attempt) -> bool:
@@ -282,7 +291,7 @@ class Dwh:
 
         logger.error(
             f"Failed to connect to the DataWarehouse after "
-            + f"{self.connection_attempts} attempts."
+            f"{self.connection_attempts} attempts."
         )
         return True
 
