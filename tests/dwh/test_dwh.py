@@ -1,321 +1,136 @@
-import logging
-from unittest.mock import Mock
+import helpers
+from pyprediktorutilities.dwh import dwh
+
+from unittest import mock
 
 import pandas as pd
 import pyodbc
 import pytest
 from pandas.testing import assert_frame_equal
 
-import helpers
-from pyprediktorutilities.dwh.dwh import Dwh
 
+class TestDwh:
+    def test_init_when_instantiate_db_then_instance_is_created(self, monkeypatch):
+        driver_index = 0
 
-def test_init_when_instantiate_db_then_instance_is_created(monkeypatch):
-    driver_index = 0
+        with mock.patch("pyprediktorutilities.dwh.dwh.pyodbc.connect"):
+            db = dwh.Dwh(
+                helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
+            )
 
-    # Mock the database connection
-    monkeypatch.setattr(
-        "pyprediktorutilities.dwh.dwh.pyodbc.connect", helpers.mock_pyodbc_connection
-    )
+        assert db is not None
 
-    db = Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index)
-    assert db is not None
+    @mock.patch("pyprediktorutilities.dwh.dwh.Dwh._Dwh__set_driver")
+    def test_dwh_connect_when_connection_is_present(self, _, dwh_instance):
+        dwh_instance.connection = mock.Mock()
+        result = dwh_instance._Dwh__connect()
+        assert result is None
 
-
-def test_init_when_instantiate_db_but_no_pyodbc_drivers_available_then_throw_exception(
-    monkeypatch,
-):
-    driver_index = 0
-
-    # Mock the absence of ODBC drivers
-    monkeypatch.setattr("pyprediktorutilities.dwh.dwh.pyodbc.drivers", lambda: [])
-
-    with pytest.raises(ValueError) as excinfo:
-        Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index)
-    assert "Driver index 0 is out of range." in str(excinfo.value)
-
-
-def test_use_as_context_when_instantiate_db_but_pyodbc_throws_error_with_tolerance_to_attempts_then_throw_exception(
-    monkeypatch,
-):
-    driver_index = 0
-
-    # Mock the database connection
-    monkeypatch.setattr(
-        "pyprediktorutilities.dwh.dwh.pyodbc.connect",
-        helpers.mock_pyodbc_connection_throws_error_not_tolerant_to_attempts,
-    )
-
-    with pytest.raises(pyodbc.DataError):
-        with Dwh(
-            helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
-        ):
+    @mock.patch("pyprediktorutilities.dwh.dwh.Dwh._Dwh__set_driver")
+    @mock.patch("pyprediktorutilities.dwh.dwh.Dwh._Dwh__connect")
+    @mock.patch("pyprediktorutilities.dwh.dwh.Dwh._Dwh__disconnect")
+    def test_dwh_use_as_context_manager_when_connection_is_present(
+        self, disconnect_mock, connect_mock, set_driver_mock, dwh_instance
+    ):
+        with dwh_instance:
             pass
 
+        assert not disconnect_mock.called
 
-def test_use_as_context_when_instantiate_db_but_pyodbc_throws_error_tolerant_to_attempts_then_retry_connecting_and_throw_exception(
-    caplog, monkeypatch
-):
-    driver_index = 0
+    def test_init_when_instantiate_dwh_but_driver_index_is_not_passed_then_instance_is_created(
+        self,
+        monkeypatch,
+    ):
+        # Mock the connection method to return a mock connection with a mock cursor
+        mock_cursor = mock.Mock()
+        mock_connection = mock.Mock()
+        mock_connection.cursor.return_value = mock_cursor
+        monkeypatch.setattr("pyodbc.connect", lambda *args, **kwargs: mock_connection)
+        monkeypatch.setattr("pyodbc.drivers", lambda: ["Driver1", "Driver2"])
 
-    # Mock the database connection
-    monkeypatch.setattr(
-        "pyprediktorutilities.dwh.dwh.pyodbc.connect",
-        helpers.mock_pyodbc_connection_throws_error_tolerant_to_attempts,
-    )
+        db = dwh.Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs())
+        assert db is not None
+        assert db.driver == "Driver1"
 
-    with caplog.at_level(logging.ERROR):
-        with pytest.raises(pyodbc.DatabaseError):
-            with Dwh(
-                helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
-            ):
-                pass
+    """
+    fetch
+    """
 
-    assert any(
-        "Failed to connect to the DataWarehouse after 3 attempts." in message
-        for message in caplog.messages
-    )
+    def test_fetch_when_to_dataframe_is_false_and_no_data_is_returned_then_return_empty_list(
+        self,
+        monkeypatch,
+    ):
+        query = "SELECT * FROM mytable"
+        driver_index = 2
 
+        expected_result = []
 
-def test_init_when_instantiate_dwh_but_driver_index_is_not_passed_then_instance_is_created(
-    monkeypatch,
-):
-    # Mock the connection method to return a mock connection with a mock cursor
-    mock_cursor = Mock()
-    mock_connection = Mock()
-    mock_connection.cursor.return_value = mock_cursor
-    monkeypatch.setattr("pyodbc.connect", lambda *args, **kwargs: mock_connection)
-    monkeypatch.setattr("pyodbc.drivers", lambda: ["Driver1", "Driver2"])
+        # Mock the cursor's fetchall methods
+        mock_cursor = mock.Mock()
+        mock_cursor.fetchall.return_value = []
+        mock_cursor.nextset.return_value = False
+        mock_cursor.description = [
+            ("plantname", None),
+            ("resource_id", None),
+            ("api_key", None),
+            ("ExtForecastTypeKey", None),
+            ("hours", None),
+            ("output_parameters", None),
+            ("period", None),
+        ]
 
-    db = Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs())
-    assert db is not None
-    assert db.driver == "Driver1"
+        # Mock the connection method to return a mock connection with a mock cursor
+        mock_connection = mock.Mock()
+        mock_connection.cursor.return_value = mock_cursor
+        monkeypatch.setattr("pyodbc.connect", lambda *args, **kwargs: mock_connection)
+        monkeypatch.setattr("pyodbc.drivers", lambda: ["Driver1", "Driver2", "Driver3"])
 
-
-"""
-fetch
-"""
-
-
-def test_use_as_context_when_init_db_connection_is_successfull_but_fails_when_calling_fetch_then_throw_exception(
-    monkeypatch,
-):
-    query = "SELECT * FROM mytable"
-    driver_index = 0
-
-    # Mock the cursor
-    mock_cursor = Mock()
-
-    # Mock the connection method to return a mock connection with a mock cursor
-    mock_connection_success = Mock()
-    mock_connection_success.cursor.return_value = mock_cursor
-
-    mock_connection_fail = Mock()
-    mock_connection_fail.cursor.side_effect = pyodbc.DataError(
-        "Error code", "Database data error"
-    )
-
-    monkeypatch.setattr(
-        "pyodbc.connect",
-        Mock(side_effect=[mock_connection_success, mock_connection_fail]),
-    )
-
-    with pytest.raises(pyodbc.DataError):
-        with Dwh(
+        db = dwh.Dwh(
             helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
-        ) as db:
-            db.connection = False
-            db.fetch(query)
+        )
+        actual_result = db.fetch(query)
 
-    assert db.connection is None
+        mock_cursor.execute.assert_called_once_with(query)
+        assert actual_result == expected_result
+        assert db.connection is None
 
+    def test_fetch_when_to_dataframe_is_false_and_single_data_set_is_returned_then_return_list_representing_single_data_set(
+        self,
+        monkeypatch,
+    ):
+        query = "SELECT * FROM mytable"
+        driver_index = 2
+        data_returned_by_db = [
+            (
+                "XY-ZK",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                13,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+            (
+                "XY-ZK",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                14,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+            (
+                "KL-MN",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                13,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+        ]
 
-def test_fetch_when_to_dataframe_is_false_and_no_data_is_returned_then_return_empty_list(
-    monkeypatch,
-):
-    query = "SELECT * FROM mytable"
-    driver_index = 2
-
-    expected_result = []
-
-    # Mock the cursor's fetchall methods
-    mock_cursor = Mock()
-    mock_cursor.fetchall.return_value = []
-    mock_cursor.nextset.return_value = False
-    mock_cursor.description = [
-        ("plantname", None),
-        ("resource_id", None),
-        ("api_key", None),
-        ("ExtForecastTypeKey", None),
-        ("hours", None),
-        ("output_parameters", None),
-        ("period", None),
-    ]
-
-    # Mock the connection method to return a mock connection with a mock cursor
-    mock_connection = Mock()
-    mock_connection.cursor.return_value = mock_cursor
-    monkeypatch.setattr("pyodbc.connect", lambda *args, **kwargs: mock_connection)
-    monkeypatch.setattr("pyodbc.drivers", lambda: ["Driver1", "Driver2", "Driver3"])
-
-    db = Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index)
-    actual_result = db.fetch(query)
-
-    mock_cursor.execute.assert_called_once_with(query)
-    assert actual_result == expected_result
-    assert db.connection is None
-
-
-def test_fetch_when_to_dataframe_is_false_and_single_data_set_is_returned_then_return_list_representing_single_data_set(
-    monkeypatch,
-):
-    query = "SELECT * FROM mytable"
-    driver_index = 2
-    data_returned_by_db = [
-        (
-            "XY-ZK",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            13,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-        (
-            "XY-ZK",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            14,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-        (
-            "KL-MN",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            13,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-    ]
-
-    expected_result = [
-        {
-            "plantname": "XY-ZK",
-            "resource_id": "1234-abcd-efgh-5678",
-            "api_key": "SOME_KEY",
-            "ExtForecastTypeKey": 13,
-            "hours": 168,
-            "output_parameters": "pv_power_advanced",
-            "period": "PT15M",
-        },
-        {
-            "plantname": "XY-ZK",
-            "resource_id": "1234-abcd-efgh-5678",
-            "api_key": "SOME_KEY",
-            "ExtForecastTypeKey": 14,
-            "hours": 168,
-            "output_parameters": "pv_power_advanced",
-            "period": "PT15M",
-        },
-        {
-            "plantname": "KL-MN",
-            "resource_id": "1234-abcd-efgh-5678",
-            "api_key": "SOME_KEY",
-            "ExtForecastTypeKey": 13,
-            "hours": 168,
-            "output_parameters": "pv_power_advanced",
-            "period": "PT15M",
-        },
-    ]
-
-    # Mock the cursor's fetchall methods
-    mock_cursor = Mock()
-    mock_cursor.fetchall.return_value = data_returned_by_db
-    mock_cursor.nextset.return_value = False
-    mock_cursor.description = [
-        ("plantname", None),
-        ("resource_id", None),
-        ("api_key", None),
-        ("ExtForecastTypeKey", None),
-        ("hours", None),
-        ("output_parameters", None),
-        ("period", None),
-    ]
-
-    # Mock the connection method to return a mock connection with a mock cursor
-    mock_connection = Mock()
-    mock_connection.cursor.return_value = mock_cursor
-    monkeypatch.setattr("pyodbc.connect", lambda *args, **kwargs: mock_connection)
-    monkeypatch.setattr("pyodbc.drivers", lambda: ["Driver1", "Driver2", "Driver3"])
-
-    db = Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index)
-    actual_result = db.fetch(query)
-
-    mock_cursor.execute.assert_called_once_with(query)
-    assert actual_result == expected_result
-    assert db.connection is None
-
-
-def test_fetch_when_to_dataframe_is_false_and_multiple_data_sets_are_returned_then_return_list_of_lists_representing_multiple_data_sets(
-    monkeypatch,
-):
-    query = "SELECT * FROM mytable"
-    driver_index = 2
-    data_returned_by_db_set_one = [
-        (
-            "XY-ZK",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            13,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-        (
-            "XY-ZK",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            14,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-        (
-            "KL-MN",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            13,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-    ]
-    data_returned_by_db_set_two = [
-        (
-            "ALPHA",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            13,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-        (
-            "BETA",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            14,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-    ]
-
-    expected_result = [
-        [
+        expected_result = [
             {
                 "plantname": "XY-ZK",
                 "resource_id": "1234-abcd-efgh-5678",
@@ -343,8 +158,399 @@ def test_fetch_when_to_dataframe_is_false_and_multiple_data_sets_are_returned_th
                 "output_parameters": "pv_power_advanced",
                 "period": "PT15M",
             },
-        ],
-        [
+        ]
+
+        # Mock the cursor's fetchall methods
+        mock_cursor = mock.Mock()
+        mock_cursor.fetchall.return_value = data_returned_by_db
+        mock_cursor.nextset.return_value = False
+        mock_cursor.description = [
+            ("plantname", None),
+            ("resource_id", None),
+            ("api_key", None),
+            ("ExtForecastTypeKey", None),
+            ("hours", None),
+            ("output_parameters", None),
+            ("period", None),
+        ]
+
+        # Mock the connection method to return a mock connection with a mock cursor
+        mock_connection = mock.Mock()
+        mock_connection.cursor.return_value = mock_cursor
+        monkeypatch.setattr("pyodbc.connect", lambda *args, **kwargs: mock_connection)
+        monkeypatch.setattr("pyodbc.drivers", lambda: ["Driver1", "Driver2", "Driver3"])
+
+        db = dwh.Dwh(
+            helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
+        )
+        actual_result = db.fetch(query)
+
+        mock_cursor.execute.assert_called_once_with(query)
+        assert actual_result == expected_result
+        assert db.connection is None
+
+    def test_fetch_when_to_dataframe_is_false_and_multiple_data_sets_are_returned_then_return_list_of_lists_representing_multiple_data_sets(
+        self,
+        monkeypatch,
+    ):
+        query = "SELECT * FROM mytable"
+        driver_index = 2
+        data_returned_by_db_set_one = [
+            (
+                "XY-ZK",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                13,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+            (
+                "XY-ZK",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                14,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+            (
+                "KL-MN",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                13,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+        ]
+        data_returned_by_db_set_two = [
+            (
+                "ALPHA",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                13,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+            (
+                "BETA",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                14,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+        ]
+
+        expected_result = [
+            [
+                {
+                    "plantname": "XY-ZK",
+                    "resource_id": "1234-abcd-efgh-5678",
+                    "api_key": "SOME_KEY",
+                    "ExtForecastTypeKey": 13,
+                    "hours": 168,
+                    "output_parameters": "pv_power_advanced",
+                    "period": "PT15M",
+                },
+                {
+                    "plantname": "XY-ZK",
+                    "resource_id": "1234-abcd-efgh-5678",
+                    "api_key": "SOME_KEY",
+                    "ExtForecastTypeKey": 14,
+                    "hours": 168,
+                    "output_parameters": "pv_power_advanced",
+                    "period": "PT15M",
+                },
+                {
+                    "plantname": "KL-MN",
+                    "resource_id": "1234-abcd-efgh-5678",
+                    "api_key": "SOME_KEY",
+                    "ExtForecastTypeKey": 13,
+                    "hours": 168,
+                    "output_parameters": "pv_power_advanced",
+                    "period": "PT15M",
+                },
+            ],
+            [
+                {
+                    "plantname": "ALPHA",
+                    "resource_id": "1234-abcd-efgh-5678",
+                    "api_key": "SOME_KEY",
+                    "ExtForecastTypeKey": 13,
+                    "hours": 168,
+                    "output_parameters": "pv_power_advanced",
+                    "period": "PT15M",
+                },
+                {
+                    "plantname": "BETA",
+                    "resource_id": "1234-abcd-efgh-5678",
+                    "api_key": "SOME_KEY",
+                    "ExtForecastTypeKey": 14,
+                    "hours": 168,
+                    "output_parameters": "pv_power_advanced",
+                    "period": "PT15M",
+                },
+            ],
+        ]
+
+        # Mock the cursor's fetchall methods
+        mock_cursor = mock.Mock()
+        mock_cursor.fetchall.side_effect = [
+            data_returned_by_db_set_one,
+            data_returned_by_db_set_two,
+        ]
+        mock_cursor.nextset.side_effect = [True, False]
+        mock_cursor.description = [
+            ("plantname", None),
+            ("resource_id", None),
+            ("api_key", None),
+            ("ExtForecastTypeKey", None),
+            ("hours", None),
+            ("output_parameters", None),
+            ("period", None),
+        ]
+
+        # Mock the connection method to return a mock connection with a mock cursor
+        mock_connection = mock.Mock()
+        mock_connection.cursor.return_value = mock_cursor
+        monkeypatch.setattr("pyodbc.connect", lambda *args, **kwargs: mock_connection)
+        monkeypatch.setattr("pyodbc.drivers", lambda: ["Driver1", "Driver2", "Driver3"])
+
+        db = dwh.Dwh(
+            helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
+        )
+        actual_result = db.fetch(query)
+
+        mock_cursor.execute.assert_called_once_with(query)
+        assert actual_result == expected_result
+        assert db.connection is None
+
+    def test_fetch_when_to_dataframe_is_true_and_no_data_is_returned_then_return_empty_dataframe(
+        self,
+        monkeypatch,
+    ):
+        query = "SELECT * FROM mytable"
+        driver_index = 2
+
+        # Mock the cursor's fetchall methods
+        mock_cursor = mock.Mock()
+        mock_cursor.fetchall.return_value = []
+        mock_cursor.nextset.return_value = False
+        mock_cursor.description = [
+            ("plantname", None),
+            ("resource_id", None),
+            ("api_key", None),
+            ("ExtForecastTypeKey", None),
+            ("hours", None),
+            ("output_parameters", None),
+            ("period", None),
+        ]
+
+        # Mock the connection method to return a mock connection with a mock cursor
+        mock_connection = mock.Mock()
+        mock_connection.cursor.return_value = mock_cursor
+        monkeypatch.setattr("pyodbc.connect", lambda *args, **kwargs: mock_connection)
+        monkeypatch.setattr("pyodbc.drivers", lambda: ["Driver1", "Driver2", "Driver3"])
+
+        db = dwh.Dwh(
+            helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
+        )
+        actual_result = db.fetch(query, True)
+
+        mock_cursor.execute.assert_called_once_with(query)
+        assert actual_result.empty
+        assert db.connection is None
+
+    def test_fetch_when_to_dataframe_is_true_and_single_data_set_is_returned_then_return_dataframe(
+        self,
+        monkeypatch,
+    ):
+        query = "SELECT * FROM mytable"
+        driver_index = 2
+        data_returned_by_db = [
+            (
+                "XY-ZK",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                13,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+            (
+                "XY-ZK",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                14,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+            (
+                "KL-MN",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                13,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+        ]
+
+        expected_result = [
+            {
+                "plantname": "XY-ZK",
+                "resource_id": "1234-abcd-efgh-5678",
+                "api_key": "SOME_KEY",
+                "ExtForecastTypeKey": 13,
+                "hours": 168,
+                "output_parameters": "pv_power_advanced",
+                "period": "PT15M",
+            },
+            {
+                "plantname": "XY-ZK",
+                "resource_id": "1234-abcd-efgh-5678",
+                "api_key": "SOME_KEY",
+                "ExtForecastTypeKey": 14,
+                "hours": 168,
+                "output_parameters": "pv_power_advanced",
+                "period": "PT15M",
+            },
+            {
+                "plantname": "KL-MN",
+                "resource_id": "1234-abcd-efgh-5678",
+                "api_key": "SOME_KEY",
+                "ExtForecastTypeKey": 13,
+                "hours": 168,
+                "output_parameters": "pv_power_advanced",
+                "period": "PT15M",
+            },
+        ]
+        expected_df = pd.DataFrame(expected_result)
+
+        # Mock the cursor's fetchall methods
+        mock_cursor = mock.Mock()
+        mock_cursor.fetchall.return_value = data_returned_by_db
+        mock_cursor.nextset.return_value = False
+        mock_cursor.description = [
+            ("plantname", None),
+            ("resource_id", None),
+            ("api_key", None),
+            ("ExtForecastTypeKey", None),
+            ("hours", None),
+            ("output_parameters", None),
+            ("period", None),
+        ]
+
+        # Mock the connection method to return a mock connection with a mock cursor
+        mock_connection = mock.Mock()
+        mock_connection.cursor.return_value = mock_cursor
+        monkeypatch.setattr("pyodbc.connect", lambda *args, **kwargs: mock_connection)
+        monkeypatch.setattr("pyodbc.drivers", lambda: ["Driver1", "Driver2", "Driver3"])
+
+        db = dwh.Dwh(
+            helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
+        )
+        actual_result = db.fetch(query, True)
+
+        mock_cursor.execute.assert_called_once_with(query)
+        assert_frame_equal(
+            actual_result.reset_index(drop=True),
+            expected_df.reset_index(drop=True),
+            check_dtype=False,
+        )
+        assert db.connection is None
+
+    def test_fetch_when_to_dataframe_is_true_and_multiple_data_sets_are_returned_then_return_list_of_dataframes_representing_multiple_data_sets(
+        self,
+        monkeypatch,
+    ):
+        query = "SELECT * FROM mytable"
+        driver_index = 2
+        data_returned_by_db_set_one = [
+            (
+                "XY-ZK",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                13,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+            (
+                "XY-ZK",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                14,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+            (
+                "KL-MN",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                13,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+        ]
+        data_returned_by_db_set_two = [
+            (
+                "ALPHA",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                13,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+            (
+                "BETA",
+                "1234-abcd-efgh-5678",
+                "SOME_KEY",
+                14,
+                168,
+                "pv_power_advanced",
+                "PT15M",
+            ),
+        ]
+
+        expected_result_set_one = [
+            {
+                "plantname": "XY-ZK",
+                "resource_id": "1234-abcd-efgh-5678",
+                "api_key": "SOME_KEY",
+                "ExtForecastTypeKey": 13,
+                "hours": 168,
+                "output_parameters": "pv_power_advanced",
+                "period": "PT15M",
+            },
+            {
+                "plantname": "XY-ZK",
+                "resource_id": "1234-abcd-efgh-5678",
+                "api_key": "SOME_KEY",
+                "ExtForecastTypeKey": 14,
+                "hours": 168,
+                "output_parameters": "pv_power_advanced",
+                "period": "PT15M",
+            },
+            {
+                "plantname": "KL-MN",
+                "resource_id": "1234-abcd-efgh-5678",
+                "api_key": "SOME_KEY",
+                "ExtForecastTypeKey": 13,
+                "hours": 168,
+                "output_parameters": "pv_power_advanced",
+                "period": "PT15M",
+            },
+        ]
+        expected_result_set_two = [
             {
                 "plantname": "ALPHA",
                 "resource_id": "1234-abcd-efgh-5678",
@@ -363,418 +569,406 @@ def test_fetch_when_to_dataframe_is_false_and_multiple_data_sets_are_returned_th
                 "output_parameters": "pv_power_advanced",
                 "period": "PT15M",
             },
-        ],
-    ]
+        ]
+        expected_df_set_one = pd.DataFrame(expected_result_set_one)
+        expected_df_set_two = pd.DataFrame(expected_result_set_two)
 
-    # Mock the cursor's fetchall methods
-    mock_cursor = Mock()
-    mock_cursor.fetchall.side_effect = [
-        data_returned_by_db_set_one,
-        data_returned_by_db_set_two,
-    ]
-    mock_cursor.nextset.side_effect = [True, False]
-    mock_cursor.description = [
-        ("plantname", None),
-        ("resource_id", None),
-        ("api_key", None),
-        ("ExtForecastTypeKey", None),
-        ("hours", None),
-        ("output_parameters", None),
-        ("period", None),
-    ]
+        # Mock the cursor's fetchall methods
+        mock_cursor = mock.Mock()
+        mock_cursor.fetchall.side_effect = [
+            data_returned_by_db_set_one,
+            data_returned_by_db_set_two,
+        ]
+        mock_cursor.nextset.side_effect = [True, False]
+        mock_cursor.description = [
+            ("plantname", None),
+            ("resource_id", None),
+            ("api_key", None),
+            ("ExtForecastTypeKey", None),
+            ("hours", None),
+            ("output_parameters", None),
+            ("period", None),
+        ]
 
-    # Mock the connection method to return a mock connection with a mock cursor
-    mock_connection = Mock()
-    mock_connection.cursor.return_value = mock_cursor
-    monkeypatch.setattr("pyodbc.connect", lambda *args, **kwargs: mock_connection)
-    monkeypatch.setattr("pyodbc.drivers", lambda: ["Driver1", "Driver2", "Driver3"])
+        # Mock the connection method to return a mock connection with a mock cursor
+        mock_connection = mock.Mock()
+        mock_connection.cursor.return_value = mock_cursor
+        monkeypatch.setattr("pyodbc.connect", lambda *args, **kwargs: mock_connection)
+        monkeypatch.setattr("pyodbc.drivers", lambda: ["Driver1", "Driver2", "Driver3"])
 
-    db = Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index)
-    actual_result = db.fetch(query)
-
-    mock_cursor.execute.assert_called_once_with(query)
-    assert actual_result == expected_result
-    assert db.connection is None
-
-
-def test_fetch_when_to_dataframe_is_true_and_no_data_is_returned_then_return_empty_dataframe(
-    monkeypatch,
-):
-    query = "SELECT * FROM mytable"
-    driver_index = 2
-
-    # Mock the cursor's fetchall methods
-    mock_cursor = Mock()
-    mock_cursor.fetchall.return_value = []
-    mock_cursor.nextset.return_value = False
-    mock_cursor.description = [
-        ("plantname", None),
-        ("resource_id", None),
-        ("api_key", None),
-        ("ExtForecastTypeKey", None),
-        ("hours", None),
-        ("output_parameters", None),
-        ("period", None),
-    ]
-
-    # Mock the connection method to return a mock connection with a mock cursor
-    mock_connection = Mock()
-    mock_connection.cursor.return_value = mock_cursor
-    monkeypatch.setattr("pyodbc.connect", lambda *args, **kwargs: mock_connection)
-    monkeypatch.setattr("pyodbc.drivers", lambda: ["Driver1", "Driver2", "Driver3"])
-
-    db = Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index)
-    actual_result = db.fetch(query, True)
-
-    mock_cursor.execute.assert_called_once_with(query)
-    assert actual_result.empty
-    assert db.connection is None
-
-
-def test_fetch_when_to_dataframe_is_true_and_single_data_set_is_returned_then_return_dataframe(
-    monkeypatch,
-):
-    query = "SELECT * FROM mytable"
-    driver_index = 2
-    data_returned_by_db = [
-        (
-            "XY-ZK",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            13,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-        (
-            "XY-ZK",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            14,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-        (
-            "KL-MN",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            13,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-    ]
-
-    expected_result = [
-        {
-            "plantname": "XY-ZK",
-            "resource_id": "1234-abcd-efgh-5678",
-            "api_key": "SOME_KEY",
-            "ExtForecastTypeKey": 13,
-            "hours": 168,
-            "output_parameters": "pv_power_advanced",
-            "period": "PT15M",
-        },
-        {
-            "plantname": "XY-ZK",
-            "resource_id": "1234-abcd-efgh-5678",
-            "api_key": "SOME_KEY",
-            "ExtForecastTypeKey": 14,
-            "hours": 168,
-            "output_parameters": "pv_power_advanced",
-            "period": "PT15M",
-        },
-        {
-            "plantname": "KL-MN",
-            "resource_id": "1234-abcd-efgh-5678",
-            "api_key": "SOME_KEY",
-            "ExtForecastTypeKey": 13,
-            "hours": 168,
-            "output_parameters": "pv_power_advanced",
-            "period": "PT15M",
-        },
-    ]
-    expected_df = pd.DataFrame(expected_result)
-
-    # Mock the cursor's fetchall methods
-    mock_cursor = Mock()
-    mock_cursor.fetchall.return_value = data_returned_by_db
-    mock_cursor.nextset.return_value = False
-    mock_cursor.description = [
-        ("plantname", None),
-        ("resource_id", None),
-        ("api_key", None),
-        ("ExtForecastTypeKey", None),
-        ("hours", None),
-        ("output_parameters", None),
-        ("period", None),
-    ]
-
-    # Mock the connection method to return a mock connection with a mock cursor
-    mock_connection = Mock()
-    mock_connection.cursor.return_value = mock_cursor
-    monkeypatch.setattr("pyodbc.connect", lambda *args, **kwargs: mock_connection)
-    monkeypatch.setattr("pyodbc.drivers", lambda: ["Driver1", "Driver2", "Driver3"])
-
-    db = Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index)
-    actual_result = db.fetch(query, True)
-
-    mock_cursor.execute.assert_called_once_with(query)
-    assert_frame_equal(
-        actual_result.reset_index(drop=True),
-        expected_df.reset_index(drop=True),
-        check_dtype=False,
-    )
-    assert db.connection is None
-
-
-def test_fetch_when_to_dataframe_is_true_and_multiple_data_sets_are_returned_then_return_list_of_dataframes_representing_multiple_data_sets(
-    monkeypatch,
-):
-    query = "SELECT * FROM mytable"
-    driver_index = 2
-    data_returned_by_db_set_one = [
-        (
-            "XY-ZK",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            13,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-        (
-            "XY-ZK",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            14,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-        (
-            "KL-MN",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            13,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-    ]
-    data_returned_by_db_set_two = [
-        (
-            "ALPHA",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            13,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-        (
-            "BETA",
-            "1234-abcd-efgh-5678",
-            "SOME_KEY",
-            14,
-            168,
-            "pv_power_advanced",
-            "PT15M",
-        ),
-    ]
-
-    expected_result_set_one = [
-        {
-            "plantname": "XY-ZK",
-            "resource_id": "1234-abcd-efgh-5678",
-            "api_key": "SOME_KEY",
-            "ExtForecastTypeKey": 13,
-            "hours": 168,
-            "output_parameters": "pv_power_advanced",
-            "period": "PT15M",
-        },
-        {
-            "plantname": "XY-ZK",
-            "resource_id": "1234-abcd-efgh-5678",
-            "api_key": "SOME_KEY",
-            "ExtForecastTypeKey": 14,
-            "hours": 168,
-            "output_parameters": "pv_power_advanced",
-            "period": "PT15M",
-        },
-        {
-            "plantname": "KL-MN",
-            "resource_id": "1234-abcd-efgh-5678",
-            "api_key": "SOME_KEY",
-            "ExtForecastTypeKey": 13,
-            "hours": 168,
-            "output_parameters": "pv_power_advanced",
-            "period": "PT15M",
-        },
-    ]
-    expected_result_set_two = [
-        {
-            "plantname": "ALPHA",
-            "resource_id": "1234-abcd-efgh-5678",
-            "api_key": "SOME_KEY",
-            "ExtForecastTypeKey": 13,
-            "hours": 168,
-            "output_parameters": "pv_power_advanced",
-            "period": "PT15M",
-        },
-        {
-            "plantname": "BETA",
-            "resource_id": "1234-abcd-efgh-5678",
-            "api_key": "SOME_KEY",
-            "ExtForecastTypeKey": 14,
-            "hours": 168,
-            "output_parameters": "pv_power_advanced",
-            "period": "PT15M",
-        },
-    ]
-    expected_df_set_one = pd.DataFrame(expected_result_set_one)
-    expected_df_set_two = pd.DataFrame(expected_result_set_two)
-
-    # Mock the cursor's fetchall methods
-    mock_cursor = Mock()
-    mock_cursor.fetchall.side_effect = [
-        data_returned_by_db_set_one,
-        data_returned_by_db_set_two,
-    ]
-    mock_cursor.nextset.side_effect = [True, False]
-    mock_cursor.description = [
-        ("plantname", None),
-        ("resource_id", None),
-        ("api_key", None),
-        ("ExtForecastTypeKey", None),
-        ("hours", None),
-        ("output_parameters", None),
-        ("period", None),
-    ]
-
-    # Mock the connection method to return a mock connection with a mock cursor
-    mock_connection = Mock()
-    mock_connection.cursor.return_value = mock_cursor
-    monkeypatch.setattr("pyodbc.connect", lambda *args, **kwargs: mock_connection)
-    monkeypatch.setattr("pyodbc.drivers", lambda: ["Driver1", "Driver2", "Driver3"])
-
-    db = Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index)
-    actual_result = db.fetch(query, True)
-
-    mock_cursor.execute.assert_called_once_with(query)
-    assert_frame_equal(
-        actual_result[0].reset_index(drop=True),
-        expected_df_set_one,
-        check_dtype=False,
-    )
-    assert_frame_equal(
-        actual_result[1].reset_index(drop=True),
-        expected_df_set_two,
-        check_dtype=False,
-    )
-    assert db.connection is None
-
-
-"""
-execute
-"""
-
-
-def test_execute_when_init_db_connection_is_successful_but_fails_when_calling_execute_then_throw_exception(
-    monkeypatch,
-):
-    query = "INSERT INTO mytable VALUES (1, 'test')"
-    driver_index = 0
-
-    # Mock the cursor
-    mock_cursor = Mock()
-
-    # Mock the connection method to return a mock connection with a mock cursor
-    mock_connection_success = Mock()
-    mock_connection_success.cursor.return_value = mock_cursor
-
-    mock_connection_fail = Mock()
-    mock_connection_fail.cursor.side_effect = pyodbc.DataError(
-        "Error code", "Database data error"
-    )
-
-    monkeypatch.setattr(
-        "pyodbc.connect",
-        Mock(side_effect=[mock_connection_success, mock_connection_fail]),
-    )
-
-    with pytest.raises(pyodbc.DataError):
-        with Dwh(
+        db = dwh.Dwh(
             helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
-        ) as db:
-            db.connection = False
-            db.execute(query)
-            assert db.connection is None
+        )
+        actual_result = db.fetch(query, True)
 
+        mock_cursor.execute.assert_called_once_with(query)
+        assert_frame_equal(
+            actual_result[0].reset_index(drop=True),
+            expected_df_set_one,
+            check_dtype=False,
+        )
+        assert_frame_equal(
+            actual_result[1].reset_index(drop=True),
+            expected_df_set_two,
+            check_dtype=False,
+        )
+        assert db.connection is None
 
-def test_execute_when_parameter_passed_then_fetch_results_and_return_data(monkeypatch):
-    query = "INSERT INTO mytable VALUES (?, ?)"
-    param_one = "John"
-    param_two = "Smith"
-    driver_index = 0
-    expected_result = [{"id": 13}]
+    """
+    execute
+    """
 
-    # Mock the cursor and execute
-    mock_cursor = Mock()
-    mock_execute = Mock()
+    def test_execute_when_parameter_passed_then_fetch_results_and_return_data(
+        self, monkeypatch
+    ):
+        query = "INSERT INTO mytable VALUES (?, ?)"
+        param_one = "John"
+        param_two = "Smith"
+        driver_index = 0
+        expected_result = [{"id": 13}]
 
-    # Mock the connection method to return a mock connection with a mock cursor
-    mock_connection = Mock()
-    mock_connection.cursor.return_value = mock_cursor
+        # Mock the cursor and execute
+        mock_cursor = mock.Mock()
+        mock_execute = mock.Mock()
 
-    monkeypatch.setattr(
-        "pyodbc.connect",
-        Mock(return_value=mock_connection),
-    )
+        # Mock the connection method to return a mock connection with a mock cursor
+        mock_connection = mock.Mock()
+        mock_connection.cursor.return_value = mock_cursor
 
-    # Mock the fetch method
-    mock_fetch = Mock(return_value=expected_result)
-    mock_cursor.execute = mock_execute
-    mock_cursor.fetchall = mock_fetch
+        monkeypatch.setattr(
+            "pyodbc.connect",
+            mock.Mock(return_value=mock_connection),
+        )
 
-    db = Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index)
-    actual_result = db.execute(query, param_one, param_two)
+        # Mock the fetch method
+        mock_fetch = mock.Mock(return_value=expected_result)
+        mock_cursor.execute = mock_execute
+        mock_cursor.fetchall = mock_fetch
 
-    mock_execute.assert_called_once_with(query, param_one, param_two)
-    mock_fetch.assert_called_once()
-    assert actual_result == expected_result
-    assert db.connection is None
+        db = dwh.Dwh(
+            helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
+        )
+        actual_result = db.execute(query, param_one, param_two)
 
+        mock_execute.assert_called_once_with(query, param_one, param_two)
+        mock_fetch.assert_called_once()
+        assert actual_result == expected_result
+        assert db.connection is None
 
-def test_execute_when_fetchall_throws_error_then_return_empty_list(monkeypatch):
-    query = "INSERT INTO mytable VALUES (?, ?)"
-    param_one = "John"
-    param_two = "Smith"
-    driver_index = 0
+    def test_init_when_instantiate_db_but_no_pyodbc_drivers_available_then_throw_exception(
+        self, monkeypatch
+    ):
+        driver_index = 0
+        monkeypatch.setattr("pyodbc.drivers", lambda: ["DRIVER1"])
+        monkeypatch.setattr(
+            dwh.Dwh,
+            "_Dwh__get_list_of_available_and_supported_pyodbc_drivers",
+            lambda self: [],
+        )
 
-    # Mock the cursor and execute
-    mock_cursor = Mock()
-    mock_execute = Mock()
-    mock_fetchall = Mock(side_effect=Exception("Error occurred"))
+        with pytest.raises(ValueError, match="No supported ODBC drivers found."):
+            dwh.Dwh(
+                helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
+            )
 
-    # Mock the connection method to return a mock connection with a mock cursor
-    mock_connection = Mock()
-    mock_connection.cursor.return_value = mock_cursor
+    def test_init_with_out_of_range_driver_index(self, monkeypatch):
+        driver_index = 1
+        monkeypatch.setattr("pyodbc.drivers", lambda: ["DRIVER1"])
+        monkeypatch.setattr(
+            dwh.Dwh,
+            "_Dwh__get_list_of_available_and_supported_pyodbc_drivers",
+            lambda self: ["DRIVER1"],
+        )
 
-    monkeypatch.setattr(
-        "pyodbc.connect",
-        Mock(return_value=mock_connection),
-    )
+        with pytest.raises(ValueError, match="Driver index 1 is out of range."):
+            dwh.Dwh(
+                helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
+            )
 
-    # Mock the fetchall method
-    mock_cursor.execute = mock_execute
-    mock_cursor.fetchall = mock_fetchall
+    @mock.patch("pyodbc.connect")
+    def test_context_manager_enter(self, _, dwh_instance):
+        assert dwh_instance.__enter__() == dwh_instance
 
-    db = Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index)
-    actual_result = db.execute(query, param_one, param_two)
+    @mock.patch("pyodbc.connect")
+    def test_exit_without_connection(self, dwh_instance):
+        dwh_instance.connection = None
+        dwh_instance.__exit__(None, None, None)
 
-    mock_execute.assert_called_once_with(query, param_one, param_two)
-    mock_fetchall.assert_called_once()
-    assert actual_result == []
-    assert db.connection is None
+    @mock.patch("pyodbc.connect")
+    def test_exit_with_open_connection_and_cleanup(self, _, dwh_instance):
+        mock_connection = mock.Mock()
+        dwh_instance.connection = mock_connection
+        dwh_instance.__exit__(None, None, None)
+
+        mock_connection.close.assert_called_once()
+        assert (
+            dwh_instance.connection is None
+        ), "Connection should be set to None after exit"
+
+    @pytest.mark.parametrize("to_dataframe", [False, True])
+    def test_fetch_multiple_datasets(
+        self, mock_pyodbc_connect, dwh_instance, to_dataframe
+    ):
+        data1 = [("value1", 1), ("value2", 2)]
+        data2 = [("value3", 3), ("value4", 4)]
+        mock_pyodbc_connect.fetchall.side_effect = [data1, data2]
+        mock_pyodbc_connect.nextset.side_effect = [True, False]
+        mock_pyodbc_connect.description = [
+            ("column1", None),
+            ("column2", None),
+        ]
+
+        result = dwh_instance.fetch("SELECT * FROM test_table", to_dataframe)
+
+        if to_dataframe:
+            expected1 = pd.DataFrame(data1, columns=["column1", "column2"])
+            expected2 = pd.DataFrame(data2, columns=["column1", "column2"])
+            assert len(result) == 2
+            assert_frame_equal(result[0], expected1)
+            assert_frame_equal(result[1], expected2)
+        else:
+            expected = [
+                [
+                    {"column1": "value1", "column2": 1},
+                    {"column1": "value2", "column2": 2},
+                ],
+                [
+                    {"column1": "value3", "column2": 3},
+                    {"column1": "value4", "column2": 4},
+                ],
+            ]
+            assert result == expected
+
+    def test_execute_with_fetch_error(self, dwh_instance, mock_pyodbc_connect, caplog):
+        mock_pyodbc_connect.fetchall.side_effect = Exception("Fetch error")
+
+        result = dwh_instance.execute("SELECT * FROM test_table")
+
+        assert result == []
+        assert "Failed to execute query: Fetch error" in caplog.text
+
+    def test_set_driver_with_valid_index(self, monkeypatch, dwh_instance):
+        available_drivers = ["DRIVER1", "DRIVER2"]
+        monkeypatch.setattr(
+            dwh.Dwh,
+            "_Dwh__get_list_of_available_and_supported_pyodbc_drivers",
+            lambda self: available_drivers,
+        )
+
+        dwh_instance._Dwh__set_driver(1)
+        assert dwh_instance.driver == "DRIVER2"
+
+    def test_get_list_of_supported_pyodbc_drivers_error(
+        self, dwh_instance, monkeypatch, caplog
+    ):
+
+        monkeypatch.setattr(
+            pyodbc, "drivers", mock.Mock(side_effect=pyodbc.Error("Test error"))
+        )
+
+        with pytest.raises(pyodbc.Error):
+            dwh_instance._Dwh__get_list_of_supported_pyodbc_drivers()
+
+    @mock.patch("pyodbc.connect")
+    @mock.patch("pyprediktorutilities.dwh.dwh.Dwh._Dwh__set_driver")
+    def test_get_available_and_supported_drivers(self, _, mock_connect):
+        dwh_instance = dwh.Dwh(
+            helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs()
+        )
+        dwh_instance._Dwh__get_list_of_supported_pyodbc_drivers = mock.Mock(
+            return_value=["Driver1", "Driver2", "Driver3"]
+        )
+        mock_connect.side_effect = [None, pyodbc.Error, None]
+
+        result = dwh_instance._Dwh__get_list_of_available_and_supported_pyodbc_drivers()
+
+        assert result == ["Driver1", "Driver3"]
+        assert mock_connect.call_count == 3
+
+    def test_connect_success(self, dwh_instance, monkeypatch):
+        mock_connection = mock.Mock()
+        monkeypatch.setattr("pyodbc.connect", lambda *args, **kwargs: mock_connection)
+
+        dwh_instance.connection = None
+        dwh_instance._Dwh__connect()
+
+        assert dwh_instance.connection is mock_connection
+        assert dwh_instance.cursor is not None
+
+    def test_connect_raises_data_error(self, dwh_instance, monkeypatch):
+        def mock_connect(*args, **kwargs):
+            raise pyodbc.DataError("Data error")
+
+        monkeypatch.setattr("pyodbc.connect", mock_connect)
+
+        dwh_instance.connection = None
+        with pytest.raises(pyodbc.DataError):
+            dwh_instance._Dwh__connect()
+
+    def test_connect_raises_integrity_error(self, dwh_instance, monkeypatch):
+        def mock_connect(*args, **kwargs):
+            raise pyodbc.IntegrityError("Integrity error")
+
+        monkeypatch.setattr("pyodbc.connect", mock_connect)
+
+        dwh_instance.connection = None
+        with pytest.raises(pyodbc.IntegrityError):
+            dwh_instance._Dwh__connect()
+
+    def test_connect_raises_programming_error(self, dwh_instance, monkeypatch):
+        def mock_connect(*args, **kwargs):
+            raise pyodbc.ProgrammingError("Programming error")
+
+        monkeypatch.setattr("pyodbc.connect", mock_connect)
+
+        dwh_instance.connection = None
+        with pytest.raises(pyodbc.ProgrammingError):
+            dwh_instance._Dwh__connect()
+
+    def test_connect_raises_not_supported_error(self, dwh_instance, monkeypatch):
+        def mock_connect(*args, **kwargs):
+            raise pyodbc.NotSupportedError("Not supported error")
+
+        monkeypatch.setattr("pyodbc.connect", mock_connect)
+
+        dwh_instance.connection = None
+        with pytest.raises(pyodbc.NotSupportedError):
+            dwh_instance._Dwh__connect()
+
+    def test_connect_retries_on_operational_error(self, dwh_instance, monkeypatch):
+        attempt_count = 0
+
+        def mock_connect(*args, **kwargs):
+            nonlocal attempt_count
+            attempt_count += 1
+            if attempt_count < 3:
+                raise pyodbc.OperationalError("Operational error")
+            return mock.Mock()
+
+        dwh_instance.connection_attempts = 3
+        dwh_instance.connection = None
+
+        with mock.patch("pyodbc.connect", side_effect=mock_connect):
+            dwh_instance._Dwh__connect()
+
+        assert attempt_count == 3, "Should attempt three connections before succeeding"
+        assert (
+            dwh_instance.connection is not None
+        ), "Connection should be established after retries"
+
+    def test_connect_raises_after_max_attempts_on_operational_error(
+        self, dwh_instance, monkeypatch
+    ):
+        def mock_connect(*args, **kwargs):
+            raise pyodbc.OperationalError("Operational error")
+
+        dwh_instance.connection = None
+        dwh_instance.connection_attempts = 3
+        with mock.patch("pyodbc.connect", side_effect=mock_connect):
+            with pytest.raises(pyodbc.Error, match="Failed to connect to the database"):
+                dwh_instance._Dwh__connect()
+
+    def test_connect_retries_on_database_error(self, dwh_instance, monkeypatch):
+        attempt_count = 0
+
+        def mock_connect(*args, **kwargs):
+            nonlocal attempt_count
+            attempt_count += 1
+            if attempt_count < 3:
+                raise pyodbc.DatabaseError("Database error")
+            return mock.Mock()
+
+        dwh_instance.connection_attempts = 3
+        dwh_instance.connection = None
+
+        with mock.patch("pyodbc.connect", side_effect=mock_connect):
+            dwh_instance._Dwh__connect()
+
+        assert attempt_count == 3, "Should attempt three connections before succeeding"
+
+    def test_connect_raises_after_max_attempts_on_database_error(
+        self, dwh_instance, monkeypatch
+    ):
+        def mock_connect(*args, **kwargs):
+            raise pyodbc.DatabaseError("Database error")
+
+        dwh_instance.connection = None
+        dwh_instance.connection_attempts = 3
+        with mock.patch("pyodbc.connect", side_effect=mock_connect):
+            with pytest.raises(pyodbc.Error, match="Failed to connect to the database"):
+                dwh_instance._Dwh__connect()
+
+    def test_connect_retries_on_generic_error(self, dwh_instance, monkeypatch):
+        attempt_count = 0
+
+        def mock_connect(*args, **kwargs):
+            nonlocal attempt_count
+            attempt_count += 1
+            if attempt_count < 3:
+                raise pyodbc.Error("Generic error")
+            return mock.Mock()
+
+        dwh_instance.connection_attempts = 3
+        dwh_instance.connection = None
+
+        with mock.patch("pyodbc.connect", side_effect=mock_connect):
+            dwh_instance._Dwh__connect()
+
+        assert attempt_count == 3, "Should attempt three connections before succeeding"
+
+    def test_connect_raises_after_max_attempts_on_generic_error(
+        self, dwh_instance, monkeypatch
+    ):
+        def mock_connect(*args, **kwargs):
+            raise pyodbc.Error("Generic error")
+
+        dwh_instance.connection = None
+        dwh_instance.connection_attempts = 3
+        with mock.patch("pyodbc.connect", side_effect=mock_connect):
+            with pytest.raises(pyodbc.Error, match="Failed to connect to the database"):
+                dwh_instance._Dwh__connect()
+
+    def test_connect_raises_error_when_connection_is_none(
+        self, dwh_instance, monkeypatch
+    ):
+
+        def mock_connect(*args, **kwargs):
+            return None
+
+        monkeypatch.setattr("pyodbc.connect", mock_connect)
+
+        dwh_instance.connection_attempts = 3
+        dwh_instance.connection = None
+
+        with pytest.raises(pyodbc.Error, match="Failed to connect to the database"):
+            dwh_instance._Dwh__connect()
+
+    def test_are_connection_attempts_reached(self, dwh_instance, caplog):
+        assert not dwh_instance._Dwh__are_connection_attempts_reached(1)
+        assert "Retrying connection..." in caplog.text
+
+        assert dwh_instance._Dwh__are_connection_attempts_reached(3)
+        assert "Failed to connect to the DataWarehouse after 3 attempts." in caplog.text
+
+    def test_disconnect(self, dwh_instance):
+        mock_connection = mock.Mock()
+        dwh_instance.connection = mock_connection
+        dwh_instance.cursor = mock.Mock()
+
+        dwh_instance._Dwh__disconnect()
+
+        assert mock_connection.close.called
+        assert dwh_instance.connection is None
+        assert dwh_instance.cursor is None
+
+    def test_disconnect_without_connection(self, dwh_instance):
+        dwh_instance.connection = None
+        dwh_instance.cursor = None
+
+        dwh_instance._Dwh__disconnect()
+
+    def test_commit(self, dwh_instance):
+        mock_connection = mock.Mock()
+        dwh_instance.connection = mock_connection
+        dwh_instance._Dwh__commit()
+        mock_connection.commit.assert_called_once()
