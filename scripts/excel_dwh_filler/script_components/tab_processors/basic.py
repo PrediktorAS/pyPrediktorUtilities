@@ -2,6 +2,7 @@ import abc
 import copy
 import datetime
 import logging
+from typing import Any
 
 from openpyxl.worksheet import worksheet
 
@@ -12,7 +13,7 @@ class BaseExcelTabProcessor(abc.ABC):
     DATE_FORMAT = "%Y-%m-%d"
     DATE_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
-    def __init__(self, data: list[tuple], tab: worksheet.Worksheet):
+    def __init__(self, data: list[Any], tab: worksheet.Worksheet):
         self.data = data
         self.tab = tab
 
@@ -49,12 +50,12 @@ class SingleColumnExcelTabProcessor(BaseExcelTabProcessor):
     VALUE_COLUMN = "B"
     FIRST_ROW_WITH_VALUE_TO_FILL = 1
 
-    def __init__(self, data: list[tuple], tab: worksheet.Worksheet):
+    def __init__(self, data: list[Any], tab: worksheet.Worksheet):
         super().__init__(data, tab)
         if not data:
             raise ValueError("The data is missing for the requested site.")
 
-        self.data_tuple = data[0]
+        self.data_tuple = tuple(data[0])
 
     def run_tab_processing(self) -> None:
         self._fill_excel_column_with_values()

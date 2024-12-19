@@ -6,7 +6,10 @@ import openpyxl
 from openpyxl import workbook
 
 from script_components import excel_sheet_dwh
-from script_components.tab_processors import basic as basic_processors, specified as specified_processors
+from script_components.tab_processors import (
+    basic as basic_processors,
+    specified as specified_processors,
+)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -34,8 +37,9 @@ class DwhExcelSheetsFiller:
         "Meter parameters": basic_processors.MultipleRowsExcelTabProcessor,
     }
 
-    def __init__(self, dwh):
+    def __init__(self, dwh: excel_sheet_dwh.ExcelSheetDwh, site: str):
         self.dwh = dwh
+        self.site = site
 
     def run(self, output_file_name: str) -> None:
         try:
@@ -61,7 +65,7 @@ class DwhExcelSheetsFiller:
                 logging.info(f"The tab named {tab_name!r} has been skipped.")
 
     def _fill_tab_with_data(self, excel_file: workbook.Workbook, tab_name: str) -> None:
-        data_to_write = self.dwh.get_data_for_tab(tab_name)
+        data_to_write = self.dwh.get_data_for_tab(tab_name=tab_name, site=self.site)
 
         row_count = len(data_to_write)
         logging.info(f"Number of rows to write for {tab_name!r}: {row_count}")
@@ -135,11 +139,12 @@ if __name__ == "__main__":
     db_password = args.db_password
     site = args.site
 
-    data_warehouse = excel_sheet_dwh.Dwh(
+    data_warehouse = excel_sheet_dwh.ExcelSheetDwh(
         url=db_url,
         database=db_name,
         username=db_username,
         password=db_password,
-        site=site,
     )
-    DwhExcelSheetsFiller(dwh=data_warehouse).run(output_file_name=output_file)
+    DwhExcelSheetsFiller(dwh=data_warehouse, site=site).run(
+        output_file_name=output_file
+    )

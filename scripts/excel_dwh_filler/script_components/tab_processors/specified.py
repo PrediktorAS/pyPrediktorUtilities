@@ -1,5 +1,6 @@
 import copy
 import datetime
+from typing import Any
 
 from openpyxl.worksheet import worksheet
 
@@ -15,7 +16,7 @@ class MainPlantParametersExcelTabProcessor(
     TARGET_DWH_OUTPUT_LENGTH = 135
     INDEX_PRIOR_TO_MISSING_GRID_STATION_ID = 14
 
-    def __init__(self, data: list[tuple], tab: worksheet.Worksheet):
+    def __init__(self, data: list[Any], tab: worksheet.Worksheet):
         super().__init__(data, tab)
         self.is_missing_grid_station_id = False
 
