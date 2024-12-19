@@ -2,10 +2,10 @@ import abc
 import argparse
 import copy
 import datetime
+import itertools
 import logging
-from itertools import combinations_with_replacement
 from string import ascii_uppercase
-from typing import Any, List, Iterator
+from typing import Any, Iterator, List
 
 import openpyxl
 import pyodbc
@@ -287,6 +287,9 @@ class Dwh:
     def get_data_for_tab(self, tab_name: str) -> list[tuple]:
         query = self.queries[tab_name].format(self.site)
         result = self.fetch(query=query)
+
+        if not result:
+            raise ValueError(f"No data fetched for site: {self.site!r}.")
         return result
 
     def get_query(self, query_name: str) -> str:
@@ -432,10 +435,14 @@ def as_text(value) -> str:
 
 
 def get_excel_column_names_iterator() -> Iterator:
-    uppercase_aa_zz_list = list(ascii_uppercase) + [
-        x[0] + x[1] for x in combinations_with_replacement(ascii_uppercase, 2)
-    ]
-    return iter(uppercase_aa_zz_list)
+    single_letters = list(ascii_uppercase)
+    double_letters = []
+    for letter in single_letters:
+        uppercase_aa_zz_list = [
+            f"{letter}{second_letter}" for second_letter in single_letters
+        ]
+        double_letters = [*double_letters, *uppercase_aa_zz_list]
+    return itertools.chain(single_letters, double_letters)
 
 
 QUERIES_LIST = {
