@@ -1,193 +1,37 @@
-import abc
 import argparse
-import copy
-import datetime
-import itertools
 import logging
-from string import ascii_uppercase
-from typing import Any, Iterator, List
+from typing import Any
 
 import openpyxl
-import pyodbc
 from openpyxl import workbook
-from openpyxl.worksheet import worksheet
+
+from script_components import excel_sheet_dwh
+from script_components.tab_processors import basic as basic_processors, specified as specified_processors
 
 logging.basicConfig(level=logging.INFO)
-
-
-class BaseExcelTabProcessor(abc.ABC):
-    DATE_FORMAT = "%Y-%m-%d"
-    DATE_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
-
-    def __init__(self, data: list[tuple], tab: worksheet.Worksheet):
-        self.data = data
-        self.tab = tab
-
-    @abc.abstractmethod
-    def run_tab_processing(self) -> None:
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def clear_data_from_tab(self) -> None:
-        raise NotImplementedError
-
-    def _format_not_convertible_to_string_values(self, value):
-        match value:
-            case bool():
-                value = int(value)
-            case float():
-                if value.is_integer():
-                    value = int(value)
-                else:
-                    value = as_text(value)
-                    value = self._change_separator_from_dot_to_comma(value)
-            case datetime.datetime():
-                value = value.strftime(self.DATE_TIME_FORMAT)
-            case datetime.date():
-                value = value.strftime(self.DATE_FORMAT)
-        return value
-
-    def _change_separator_from_dot_to_comma(self, float_as_str: str) -> str:
-        float_with_comma_separator = as_text(float_as_str).replace(".", ",")
-        return float_with_comma_separator
-
-
-class SingleColumnExcelTabProcessor(BaseExcelTabProcessor):
-    VALUE_COLUMN = "B"
-    FIRST_ROW_WITH_VALUE_TO_FILL = 1
-
-    def __init__(self, data: list[tuple], tab: worksheet.Worksheet):
-        super().__init__(data, tab)
-        self.data_tuple = data[0]
-
-    def run_tab_processing(self) -> None:
-        self._fill_excel_column_with_values()
-
-    def _fill_excel_column_with_values(self) -> None:
-        excel_row_index = copy.copy(self.FIRST_ROW_WITH_VALUE_TO_FILL)
-
-        for row_datum in self.data_tuple:
-            transformed_row_datum = self._format_not_convertible_to_string_values(
-                row_datum
-            )
-            formatted_row_datum = as_text(transformed_row_datum)
-
-            cell_location = f"{self.VALUE_COLUMN}{excel_row_index}"
-            self.__place_value_at_location(cell_location, formatted_row_datum)
-
-            excel_row_index += 1
-
-    def __place_value_at_location(self, cell_location: str, formatted_row_datum: str):
-        self.tab[cell_location] = as_text(formatted_row_datum)
-
-    def clear_data_from_tab(self) -> None:
-        logging.warning(
-            "Clearing data for the single-column values tabs not implemented. "
-            "If you can see this, the implementation should be added!"
-        )
-
-
-class MainPlantParametersExcelTabProcessor(SingleColumnExcelTabProcessor):
-    FIRST_ROW_WITH_VALUE_TO_FILL = 4
-
-    TARGET_DWH_OUTPUT_LENGTH = 135
-    INDEX_PRIOR_TO_MISSING_GRID_STATION_ID = 14
-
-    def __init__(self, data: list[tuple], tab: worksheet.Worksheet):
-        super().__init__(data, tab)
-        self.is_missing_grid_station_id = False
-
-    def _fill_excel_column_with_values(self) -> None:
-        self.is_missing_grid_station_id = (
-            len(self.data_tuple) == self.TARGET_DWH_OUTPUT_LENGTH
-        )
-        excel_row_index = copy.copy(self.FIRST_ROW_WITH_VALUE_TO_FILL)
-
-        for row_datum in self.data_tuple:
-            if isinstance(row_datum, bool):
-                row_datum = int(row_datum)
-            elif isinstance(row_datum, float):
-                if row_datum.is_integer():
-                    row_datum = int(row_datum)
-                else:
-                    row_datum = as_text(row_datum)
-                    row_datum = self._change_separator_from_dot_to_comma(row_datum)
-            elif isinstance(row_datum, datetime.date):
-                row_datum = row_datum.strftime(self.DATE_FORMAT)
-            cell_location = f"{self.VALUE_COLUMN}{excel_row_index}"
-
-            self.tab[cell_location] = as_text(row_datum)
-
-            if self.is_missing_grid_station_id:
-                if excel_row_index == self.INDEX_PRIOR_TO_MISSING_GRID_STATION_ID:
-                    excel_row_index += 1
-                    self.tab[f"{self.VALUE_COLUMN}{excel_row_index}"] = ""
-
-            excel_row_index += 1
-
-
-class DWHExtractParametersExcelTabProcessor(SingleColumnExcelTabProcessor):
-    FIRST_ROW_WITH_VALUE_TO_FILL = 3
-
-
-class UAModelParametersExcelTabProcessor(SingleColumnExcelTabProcessor):
-    FIRST_ROW_WITH_VALUE_TO_FILL = 3
-
-
-class SolarGISParametersExcelTabProcessor(SingleColumnExcelTabProcessor):
-    FIRST_ROW_WITH_VALUE_TO_FILL = 5
-
-
-class MultipleRowsExcelTabProcessor(BaseExcelTabProcessor):
-    FIRST_ROW_TO_FILL = 3
-
-    def run_tab_processing(self) -> None:
-        self._fill_excel_rows_with_values()
-
-    def _fill_excel_rows_with_values(self) -> None:
-        excel_row_index = copy.copy(self.FIRST_ROW_TO_FILL)
-
-        for row_data in self.data:
-            excel_column_names_iterator = get_excel_column_names_iterator()
-            for cell_datum in row_data:
-                column_index = next(excel_column_names_iterator)
-                cell_location = f"{column_index}{excel_row_index}"
-
-                transformed_cell_datum = self._format_not_convertible_to_string_values(
-                    cell_datum
-                )
-                formatted_cell_datum = as_text(transformed_cell_datum)
-                self.tab[cell_location] = as_text(formatted_cell_datum)
-            excel_row_index += 1
-
-    def clear_data_from_tab(self) -> None:
-        # clear the data, but keep the formatting:
-        for row in self.tab.iter_rows(min_row=self.FIRST_ROW_TO_FILL):
-            for cell in row:
-                cell.value = None
 
 
 class DwhExcelSheetsFiller:
     TEMPLATE_NAME = "template.xlsx"
     TAB_NAME_TO_PROCESSOR_MAPPING = {
-        "Main plant parameters": MainPlantParametersExcelTabProcessor,
-        "DWH Extract Parameters": DWHExtractParametersExcelTabProcessor,
-        "UA model parameters": UAModelParametersExcelTabProcessor,
-        "SolarGIS parameters": SolarGISParametersExcelTabProcessor,
-        "Sub facilities": MultipleRowsExcelTabProcessor,
-        "String combiner parameters": MultipleRowsExcelTabProcessor,
-        "Transformer parameters": MultipleRowsExcelTabProcessor,
-        "Module-Mounting stru parameters": MultipleRowsExcelTabProcessor,
-        "Inverter parameters": MultipleRowsExcelTabProcessor,
-        "String Channel parameters": MultipleRowsExcelTabProcessor,
-        "Tracker parameters": MultipleRowsExcelTabProcessor,
-        "Weather station parameters": MultipleRowsExcelTabProcessor,
-        "Sub Station": MultipleRowsExcelTabProcessor,
-        "Sub Station Transformer": MultipleRowsExcelTabProcessor,
-        "Feeder": MultipleRowsExcelTabProcessor,
-        "Grid Connection Point": MultipleRowsExcelTabProcessor,
-        "PPC Parameters": MultipleRowsExcelTabProcessor,
-        "Meter parameters": MultipleRowsExcelTabProcessor,
+        "Main plant parameters": specified_processors.MainPlantParametersExcelTabProcessor,
+        "DWH Extract Parameters": specified_processors.DWHExtractParametersExcelTabProcessor,
+        "UA model parameters": specified_processors.UAModelParametersExcelTabProcessor,
+        "SolarGIS parameters": specified_processors.SolarGISParametersExcelTabProcessor,
+        "Sub facilities": basic_processors.MultipleRowsExcelTabProcessor,
+        "String combiner parameters": basic_processors.MultipleRowsExcelTabProcessor,
+        "Transformer parameters": basic_processors.MultipleRowsExcelTabProcessor,
+        "Module-Mounting stru parameters": basic_processors.MultipleRowsExcelTabProcessor,
+        "Inverter parameters": basic_processors.MultipleRowsExcelTabProcessor,
+        "String Channel parameters": basic_processors.MultipleRowsExcelTabProcessor,
+        "Tracker parameters": basic_processors.MultipleRowsExcelTabProcessor,
+        "Weather station parameters": basic_processors.MultipleRowsExcelTabProcessor,
+        "Sub Station": basic_processors.MultipleRowsExcelTabProcessor,
+        "Sub Station Transformer": basic_processors.MultipleRowsExcelTabProcessor,
+        "Feeder": basic_processors.MultipleRowsExcelTabProcessor,
+        "Grid Connection Point": basic_processors.MultipleRowsExcelTabProcessor,
+        "PPC Parameters": basic_processors.MultipleRowsExcelTabProcessor,
+        "Meter parameters": basic_processors.MultipleRowsExcelTabProcessor,
     }
 
     def __init__(self, dwh):
@@ -231,7 +75,7 @@ class DwhExcelSheetsFiller:
 
     def __select_tab_processor(
         self, data_to_write: list[Any], excel_file: workbook.Workbook, tab_name: str
-    ) -> BaseExcelTabProcessor:
+    ) -> basic_processors.BaseExcelTabProcessor:
         tab_processor_class = self.TAB_NAME_TO_PROCESSOR_MAPPING[tab_name]
         tab_processor = tab_processor_class(data_to_write, excel_file[tab_name])
         return tab_processor
@@ -242,229 +86,6 @@ class DwhExcelSheetsFiller:
         logging.info(f"Saving the Excel sheet to {output_file_name!r}...")
         excel_sheet.save(output_file_name)
         logging.info("Saving the Excel sheet has been completed!")
-
-
-class Dwh:
-    def __init__(
-        self,
-        url: str,
-        database: str,
-        username: str,
-        password: str,
-        site: str,
-        driver_index: int = -1,
-    ) -> None:
-        self.url = url
-        self.database = database
-        self.username = username
-        self.password = password
-        self.site = site
-
-        self.driver = ""
-        self.cursor = None
-        self.connection = None
-        self.__set_driver(driver_index)
-
-        self.connection_string = (
-            f"UID={self.username};"
-            + f"PWD={self.password};"
-            + f"DRIVER={self.driver};"
-            + f"SERVER={self.url};"
-            + f"DATABASE={self.database};"
-            + "TrustServerCertificate=yes;"
-        )
-        self.connection_attempts = 3
-        self.queries = QUERIES_LIST
-
-    def __enter__(self):
-        self.__connect()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.connection is not None:
-            self.__disconnect()
-
-    def get_data_for_tab(self, tab_name: str) -> list[tuple]:
-        query = self.queries[tab_name].format(self.site)
-        result = self.fetch(query=query)
-
-        if not result:
-            raise ValueError(f"No data fetched for site: {self.site!r}.")
-        return result
-
-    def get_query(self, query_name: str) -> str:
-        return self.queries[query_name].format(self.site)
-
-    def fetch(self, query: str) -> List[Any]:
-        self.__connect()
-        self.cursor.execute(query)
-
-        results = []
-        while True:
-            for row in self.cursor.fetchall():
-                results.append(tuple(row))
-
-            if not self.cursor.nextset():
-                break
-
-        self.__disconnect()  # prevent from leaving open transactions in DWH
-        return results
-
-    def __set_driver(self, driver_index: int) -> None:
-        if driver_index < 0:
-            drivers = self.__get_list_of_available_and_supported_pyodbc_drivers()
-            if len(drivers) > 0:
-                self.driver = drivers[0]
-            return
-
-        if self.__get_number_of_available_pyodbc_drivers() < (driver_index + 1):
-            raise ValueError(
-                f"Driver index {driver_index} is out of range. Please use "
-                + f"the __get_list_of_available_pyodbc_drivers() method "
-                + f"to list all available drivers."
-            )
-
-        self.driver = self.__get_list_of_supported_pyodbc_drivers()[driver_index]
-
-    def __get_number_of_available_pyodbc_drivers(self) -> int:
-        return len(self.__get_list_of_supported_pyodbc_drivers())
-
-    def __get_list_of_supported_pyodbc_drivers(self) -> List[Any]:
-        return pyodbc.drivers()
-
-    def __get_list_of_available_and_supported_pyodbc_drivers(self) -> List[Any]:
-        available_drivers = []
-        for driver in self.__get_list_of_supported_pyodbc_drivers():
-            try:
-                pyodbc.connect(
-                    f"UID={self.username};"
-                    + f"PWD={self.password};"
-                    + f"DRIVER={driver};"
-                    + f"SERVER={self.url};"
-                    + f"DATABASE={self.database};",
-                    timeout=3,
-                )
-                available_drivers.append(driver)
-            except pyodbc.Error as e:
-                pass
-
-        return available_drivers
-
-    def __connect(self) -> None:
-        if self.connection:
-            return
-
-        attempt = 0
-        while attempt < self.connection_attempts:
-            try:
-                self.connection = pyodbc.connect(self.connection_string)
-                self.cursor = self.connection.cursor()
-                break
-
-            # Exceptions once thrown there is no point attempting
-            except pyodbc.DataError as err:
-                logging.error(f"Data Error {err.args[0]}: {err.args[1]}")
-                raise
-            except pyodbc.IntegrityError as err:
-                logging.error(f"Integrity Error {err.args[0]}: {err.args[1]}")
-                raise
-            except pyodbc.ProgrammingError as err:
-                logging.error(f"Programming Error {err.args[0]}: {err.args[1]}")
-                logging.warning(
-                    f"There seems to be a problem with your code. Please "
-                    + f"check your code and try again."
-                )
-                raise
-            except pyodbc.NotSupportedError as err:
-                logging.error(f"Not supported {err.args[0]}: {err.args[1]}")
-                raise
-
-            # Exceptions when thrown we can continue attempting
-            except pyodbc.OperationalError as err:
-                logging.error(f"Operational Error {err.args[0]}: {err.args[1]}")
-                logging.warning(
-                    f"Pyodbc is having issues with the connection. This "
-                    + f"could be due to the wrong driver being used. Please "
-                    + f"check your driver with "
-                    + f"the __get_list_of_available_and_supported_pyodbc_drivers() method "
-                    + f"and try again."
-                )
-
-                attempt += 1
-                if self.__are_connection_attempts_reached(attempt):
-                    raise
-            except pyodbc.DatabaseError as err:
-                logging.error(f"Database Error {err.args[0]}: {err.args[1]}")
-
-                attempt += 1
-                if self.__are_connection_attempts_reached(attempt):
-                    raise
-            except pyodbc.Error as err:
-                logging.error(f"Generic Error {err.args[0]}: {err.args[1]}")
-
-                attempt += 1
-                if self.__are_connection_attempts_reached(attempt):
-                    raise
-
-    def __are_connection_attempts_reached(self, attempt) -> bool:
-        if attempt != self.connection_attempts:
-            logging.warning("Retrying connection...")
-            return False
-
-        logging.error(
-            f"Failed to connect to the DataWarehouse after "
-            + f"{self.connection_attempts} attempts."
-        )
-        return True
-
-    def __disconnect(self) -> None:
-        if self.connection:
-            self.connection.close()
-
-            self.cursor = None
-            self.connection = None
-
-    def __commit(self) -> None:
-        self.connection.commit()
-
-
-def as_text(value) -> str:
-    if value is None:
-        return ""
-    return str(value)
-
-
-def get_excel_column_names_iterator() -> Iterator:
-    single_letters = list(ascii_uppercase)
-    double_letters = []
-    for letter in single_letters:
-        uppercase_aa_zz_list = [
-            f"{letter}{second_letter}" for second_letter in single_letters
-        ]
-        double_letters = [*double_letters, *uppercase_aa_zz_list]
-    return itertools.chain(single_letters, double_letters)
-
-
-QUERIES_LIST = {
-    "Main plant parameters": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='Main plant parameters';",
-    "DWH Extract Parameters": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='DWH Extract Parameters';",
-    "UA model parameters": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='UA model parameters';",
-    "SolarGIS parameters": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='SolarGIS parameters';",
-    "Sub facilities": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='Sub facilities';",
-    "String combiner parameters": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='String combiner';",
-    "Transformer parameters": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='Transformer parameters';",
-    "Module-Mounting stru parameters": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='Module-Mounting stru parameters';",
-    "Inverter parameters": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='Inverter parameters';",
-    "String Channel parameters": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='String Channel parameters';",
-    "Tracker parameters": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='Tracker parameters';",
-    "Weather station parameters": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='Weather station parameters';",
-    "Sub Station": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='Sub Station';",
-    "Sub Station Transformer": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='Sub Station Transformer';",
-    "Feeder": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='Feeder';",
-    "Grid Connection Point": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='Grid Connection Point';",
-    "PPC Parameters": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='PPC Parameters';",
-    "Meter parameters": "exec [dwetl].[GetPlantParametersData] @Facilityname='{}', @DataType='Meter parameters';",
-}
 
 
 if __name__ == "__main__":
@@ -514,7 +135,7 @@ if __name__ == "__main__":
     db_password = args.db_password
     site = args.site
 
-    data_warehouse = Dwh(
+    data_warehouse = excel_sheet_dwh.Dwh(
         url=db_url,
         database=db_name,
         username=db_username,

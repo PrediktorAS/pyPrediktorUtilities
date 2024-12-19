@@ -9,6 +9,7 @@ This script is used to fill the Excel file with data from DWH.
 pip install -r requirements.txt
 ```
 - The DWH Excel template. Paste it to the same directory as the script, and name it `template.xlsx`.
+- A MSSQL Driver installed on your machine.
 
 ## Usage
 
