@@ -4,7 +4,8 @@ from helpers import grs
 from pyprediktorutilities.dwh import dwh_singleton
 
 
-def test_dwh_singleton_can_be_created_only_once(monkeypatch):
+@mock.patch("pyprediktorutilities.dwh.dwh.Dwh._Dwh__set_driver")
+def test_dwh_singleton_can_be_created_only_once(_, monkeypatch):
     driver_index = 0
 
     with mock.patch("pyprediktorutilities.dwh.dwh.pyodbc.connect"):

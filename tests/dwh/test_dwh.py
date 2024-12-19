@@ -10,7 +10,8 @@ from pandas.testing import assert_frame_equal
 
 
 class TestDwh:
-    def test_init_when_instantiate_db_then_instance_is_created(self, monkeypatch):
+    @mock.patch("pyprediktorutilities.dwh.dwh.Dwh._Dwh__set_driver")
+    def test_init_when_instantiate_db_then_instance_is_created(self, _, monkeypatch):
         driver_index = 0
 
         with mock.patch("pyprediktorutilities.dwh.dwh.pyodbc.connect"):
@@ -618,8 +619,9 @@ class TestDwh:
     execute
     """
 
+    @mock.patch("pyprediktorutilities.dwh.dwh.Dwh._Dwh__set_driver")
     def test_execute_when_parameter_passed_then_fetch_results_and_return_data(
-        self, monkeypatch
+        self, _, monkeypatch
     ):
         query = "INSERT INTO mytable VALUES (?, ?)"
         param_one = "John"
