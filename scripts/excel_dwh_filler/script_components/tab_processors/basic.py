@@ -107,7 +107,6 @@ class MultipleRowsExcelTabProcessor(BaseExcelTabProcessor):
             excel_row_index += 1
 
     def clear_data_from_tab(self) -> None:
-        # clear the data, but keep the formatting:
         for row in self.tab.iter_rows(min_row=self.FIRST_ROW_TO_FILL):
             for cell in row:
                 cell.value = None

@@ -93,7 +93,6 @@ class DwhExcelSheetsFiller:
 
 
 if __name__ == "__main__":
-    # parse arguments from command line:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--db_url",
