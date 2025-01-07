@@ -34,7 +34,6 @@ class MainPlantParametersExcelTabProcessor(
                     row_datum = int(row_datum)
                 else:
                     row_datum = helpers.as_text(row_datum)
-                    row_datum = self._change_separator_from_dot_to_comma(row_datum)
             elif isinstance(row_datum, datetime.date):
                 row_datum = row_datum.strftime(self.DATE_FORMAT)
             cell_location = f"{self.VALUE_COLUMN}{excel_row_index}"
