@@ -1,5 +1,5 @@
-import argparse
 import logging
+import os
 from typing import Any
 
 import openpyxl
@@ -93,50 +93,12 @@ class DwhExcelSheetsFiller:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--db_url",
-        type=str,
-        default="localhost",
-        help="The URL of the MSSQL server",
-    )
-    parser.add_argument(
-        "--db_name",
-        type=str,
-        default="master",
-        help="The name of the database",
-    )
-    parser.add_argument(
-        "--db_username",
-        type=str,
-        default="sa",
-        help="The username",
-    )
-    parser.add_argument(
-        "--db_password",
-        type=str,
-        default="Password123",
-        help="The password",
-    )
-    parser.add_argument(
-        "--output_file",
-        type=str,
-        default="output.xlsx",
-        help="The name of the output file",
-    )
-    parser.add_argument(
-        "--site",
-        type=str,
-        default="None",
-        help="Site to fetch data for",
-    )
-    args = parser.parse_args()
-    output_file = args.output_file
-    db_url = args.db_url
-    db_name = args.db_name
-    db_username = args.db_username
-    db_password = args.db_password
-    site = args.site
+    output_file = os.getenv("OUTPUT_FILE")
+    db_url = os.getenv("DB_URL")
+    db_name = os.getenv("DB_NAME")
+    db_username = os.getenv("DB_USERNAME")
+    db_password = os.getenv("DB_PASSWORD")
+    site = os.getenv("SITE")
 
     data_warehouse = excel_sheet_dwh.ExcelSheetDwh(
         url=db_url,
