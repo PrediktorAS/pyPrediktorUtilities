@@ -1,5 +1,5 @@
-import argparse
 import logging
+import os
 import re
 
 import openpyxl
@@ -37,10 +37,14 @@ class SQLStoreProcedureUpdater:
         self.procedure_sql_file = procedure_sql_file
 
     def update_with_column_names(self, output_file: str):
+        logging.info("The stored procedure update has been started!")
+        logging.info("Collecting columns from Excel file...")
         procedure_to_columns_mapping = self._collect_columns_mapping()
+        logging.info("Creating the output SQL file...")
         self._create_sql_output_file(
             procedure_sql_file, output_file, procedure_to_columns_mapping
         )
+        logging.info(f"The stored procedure update has been done! The new file is: {output_file}.")
 
     def _collect_columns_mapping(self):
         excel_file = openpyxl.load_workbook("template.xlsx")
@@ -112,28 +116,14 @@ class SQLStoreProcedureUpdater:
     def _save_sql_output_file(
         self, output_file: str, output_sql_file_lines: list[str]
     ) -> None:
+        logging.info("Saving the SQL output file...")
         with open(output_file, "w") as file:
             file.writelines(output_sql_file_lines)
 
 
 if __name__ == "__main__":
-    # parse arguments from command line:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--procedure_sql_file",
-        type=str,
-        default="example.sql",
-        help="The name of the SQL procedure file",
-    )
-    parser.add_argument(
-        "--output_file",
-        type=str,
-        default="output.sql",
-        help="The name of the output file",
-    )
-    args = parser.parse_args()
-    procedure_sql_file = args.procedure_sql_file
-    output_file = args.output_file
+    procedure_sql_file = os.getenv("PROCEDURE_SQL_FILE")
+    output_file = os.getenv("OUTPUT_FILE")
 
     updater = SQLStoreProcedureUpdater(procedure_sql_file)
     updater.update_with_column_names(output_file)

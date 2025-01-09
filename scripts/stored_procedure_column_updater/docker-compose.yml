@@ -1,0 +1,10 @@
+services:
+  app:
+    container_name: stored_procedure_columns_updater_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ./config.env
+    volumes:
+      - ./:/app/
