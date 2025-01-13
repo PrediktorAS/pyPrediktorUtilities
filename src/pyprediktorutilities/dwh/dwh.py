@@ -144,15 +144,13 @@ class Dwh:
         """
         self.__connect()
         try:
-            try:
-                self.cursor.execute(query, *args, **kwargs)
-                result = self.cursor.fetchall()
-            except Exception as e:
-                logging.error(f"Failed to execute query: {e}")
-                return []
-
+            self.cursor.execute(query, *args, **kwargs)
+            result = self.cursor.fetchall()
             self.__commit()
             return result
+        except Exception as e:
+            logging.error(f"Failed to execute query: {e}")
+            return []
         finally:
             self.__disconnect()  # prevent from leaving open transactions in DWH
 
