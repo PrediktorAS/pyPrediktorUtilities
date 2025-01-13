@@ -98,23 +98,25 @@ class Dwh:
                 is going to be in DataFrame format.
         """
         self.__connect()
-        self.cursor.execute(query)
+        try:
+            self.cursor.execute(query)
 
-        data_sets = []
-        while True:
-            columns = [col[0] for col in self.cursor.description]
-            data_set = [dict(zip(columns, row)) for row in self.cursor.fetchall()]
+            data_sets = []
+            while True:
+                columns = [col[0] for col in self.cursor.description]
+                data_set = [dict(zip(columns, row)) for row in self.cursor.fetchall()]
 
-            if to_dataframe:
-                data_sets.append(pd.DataFrame(data_set, columns=columns))
-            else:
-                data_sets.append(data_set)
+                if to_dataframe:
+                    data_sets.append(pd.DataFrame(data_set, columns=columns))
+                else:
+                    data_sets.append(data_set)
 
-            if not self.cursor.nextset():
-                break
+                if not self.cursor.nextset():
+                    break
 
-        self.__disconnect()  # prevent from leaving open transactions in DWH
-        return data_sets if len(data_sets) > 1 else data_sets[0]
+            return data_sets if len(data_sets) > 1 else data_sets[0]
+        finally:
+            self.__disconnect()  # prevent from leaving open transactions in DWH
 
     @validate_call
     def execute(self, query: str, *args, **kwargs) -> List[Any]:
@@ -144,13 +146,13 @@ class Dwh:
         try:
             self.cursor.execute(query, *args, **kwargs)
             result = self.cursor.fetchall()
+            self.__commit()
+            return result
         except Exception as e:
             logging.error(f"Failed to execute query: {e}")
             return []
-
-        self.__commit()
-        self.__disconnect()  # prevent from leaving open transactions in DWH
-        return result
+        finally:
+            self.__disconnect()  # prevent from leaving open transactions in DWH
 
     """
     Private - Driver
