@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>pyprediktorutilities.templating &mdash; pyPrediktorUtilities 0.4.4 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+  <title>pyprediktorutilities.templating &mdash; pyPrediktorUtilities 0.4.5 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=90733dfc"></script>
+      <script src="../../_static/documentation_options.js?v=340bb9e5"></script>
       <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/js/theme.js"></script>
@@ -73,10 +73,10 @@
            <div itemprop="articleBody">
              
   <h1>Source code for pyprediktorutilities.templating</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">jinja2</span> <span class="kn">import</span> <span class="n">Environment</span><span class="p">,</span> <span class="n">FileSystemLoader</span><span class="p">,</span> <span class="n">select_autoescape</span><span class="p">,</span> <span class="n">StrictUndefined</span>
-<span class="kn">from</span> <span class="nn">pyprediktorutilities.shared</span> <span class="kn">import</span> <span class="n">validate_folder</span><span class="p">,</span> <span class="n">validate_file</span>
-<span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">import</span> <span class="nn">os</span>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">jinja2</span><span class="w"> </span><span class="kn">import</span> <span class="n">Environment</span><span class="p">,</span> <span class="n">FileSystemLoader</span><span class="p">,</span> <span class="n">select_autoescape</span><span class="p">,</span> <span class="n">StrictUndefined</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pyprediktorutilities.shared</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate_folder</span><span class="p">,</span> <span class="n">validate_file</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 
 <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
 <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">NullHandler</span><span class="p">())</span>
@@ -84,7 +84,7 @@
 
 <div class="viewcode-block" id="Templating">
 <a class="viewcode-back" href="../../api/pyprediktorutilities.html#pyprediktorutilities.templating.Templating">[docs]</a>
-<span class="k">class</span> <span class="nc">Templating</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Templating</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Simple wrapper around a templating engine, allowing for easy rendering of templates</span>
 <span class="sd">    such as XMLs and HTMLs. Build on top of Jinja2</span>
 <span class="sd">    </span>
@@ -109,7 +109,7 @@
 <span class="sd">        &gt;&gt;&gt; templating.render_to_file(template, &#39;output.html&#39;, title=&#39;Home&#39;)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Class initialization</span>
 
 <span class="sd">        Args:</span>
@@ -137,7 +137,7 @@
         
 <div class="viewcode-block" id="Templating.list_templates">
 <a class="viewcode-back" href="../../api/pyprediktorutilities.html#pyprediktorutilities.templating.Templating.list_templates">[docs]</a>
-    <span class="k">def</span> <span class="nf">list_templates</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_templates</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a list of templates in the folder</span>
 
 <span class="sd">        Returns:</span>
@@ -148,7 +148,7 @@
 
 <div class="viewcode-block" id="Templating.load_template">
 <a class="viewcode-back" href="../../api/pyprediktorutilities.html#pyprediktorutilities.templating.Templating.load_template">[docs]</a>
-    <span class="k">def</span> <span class="nf">load_template</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">template</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_template</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">template</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Loads a template from the folder</span>
 
 <span class="sd">        Args:</span>
@@ -173,7 +173,7 @@
 
 <div class="viewcode-block" id="Templating.render">
 <a class="viewcode-back" href="../../api/pyprediktorutilities.html#pyprediktorutilities.templating.Templating.render">[docs]</a>
-    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">template</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">template</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Render a template with the given arguments and return a string</span>
 
 <span class="sd">        Args:</span>
@@ -197,7 +197,7 @@
     
 <div class="viewcode-block" id="Templating.render_to_file">
 <a class="viewcode-back" href="../../api/pyprediktorutilities.html#pyprediktorutilities.templating.Templating.render_to_file">[docs]</a>
-    <span class="k">def</span> <span class="nf">render_to_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">template</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">render_to_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">template</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">file</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Render a template with the given arguments and write to a file</span>
 
 <span class="sd">        Args:</span>

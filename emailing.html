@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sending emails from Python &mdash; pyPrediktorUtilities 0.4.4 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+  <title>Sending emails from Python &mdash; pyPrediktorUtilities 0.4.5 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=90733dfc"></script>
+      <script src="_static/documentation_options.js?v=340bb9e5"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -81,7 +81,7 @@
 created a small wrapper around the standard Python smtplib module. This
 wrapper is called <code class="xref py py-class docutils literal notranslate"><span class="pre">SendEmail</span></code> and is located can be imported into
 your Python script by using the following code:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pyprediktorutilities.send_email</span> <span class="kn">import</span> <span class="n">SendEmail</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pyprediktorutilities.send_email</span><span class="w"> </span><span class="kn">import</span> <span class="n">SendEmail</span>
 </pre></div>
 </div>
 <p>You’ll need an SMTP server to send emails. If you don’t have a specified
@@ -112,7 +112,7 @@ function. This function takes the following arguments:</p>
 <p>The function raises an exception if the email could not be sent and will log
 the results if you have defined a logger in your script.</p>
 <p>Putting it all together, you’ll have the following code:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pyprediktorutilities.send_email</span> <span class="kn">import</span> <span class="n">SendEmail</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pyprediktorutilities.send_email</span><span class="w"> </span><span class="kn">import</span> <span class="n">SendEmail</span>
 
 <span class="n">email</span> <span class="o">=</span> <span class="n">SendEmail</span><span class="p">(</span><span class="n">smtp_server</span><span class="p">,</span> <span class="n">smtp_port</span><span class="p">,</span> <span class="n">smtp_username</span><span class="p">,</span> <span class="n">smtp_password</span><span class="p">)</span>
 <span class="n">email</span><span class="o">.</span><span class="n">send_email</span><span class="p">(</span>
