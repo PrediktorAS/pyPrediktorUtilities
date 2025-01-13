@@ -665,7 +665,7 @@ class TestDwh:
         monkeypatch.setattr(
             dwh.Dwh,
             "_Dwh__get_list_of_available_and_supported_pyodbc_drivers",
-            lambda self: [],
+            lambda self: {"available": [], "supported": []},
         )
 
         with pytest.raises(ValueError, match="No supported ODBC drivers found."):
@@ -679,7 +679,7 @@ class TestDwh:
         monkeypatch.setattr(
             dwh.Dwh,
             "_Dwh__get_list_of_available_and_supported_pyodbc_drivers",
-            lambda self: ["DRIVER1"],
+            lambda self: {"available": ["DRIVER1"], "supported": ["DRIVER1"]},
         )
 
         with pytest.raises(ValueError, match="Driver index 1 is out of range."):
@@ -749,43 +749,57 @@ class TestDwh:
         assert result == []
         assert "Failed to execute query: Fetch error" in caplog.text
 
-    def test_set_driver_with_valid_index(self, monkeypatch, dwh_instance):
-        available_drivers = ["DRIVER1", "DRIVER2"]
+    def test_set_driver_with_valid_index(self, monkeypatch):
+        available_drivers = {
+            "available": ["DRIVER1", "DRIVER2"],
+            "supported": ["DRIVER1", "DRIVER2"],
+        }
         monkeypatch.setattr(
             dwh.Dwh,
             "_Dwh__get_list_of_available_and_supported_pyodbc_drivers",
             lambda self: available_drivers,
         )
 
-        dwh_instance._Dwh__set_driver(1)
+        driver_index = 1
+        dwh_instance = dwh.Dwh(
+            helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
+        )
+
         assert dwh_instance.driver == "DRIVER2"
 
     def test_get_list_of_supported_pyodbc_drivers_error(
         self, dwh_instance, monkeypatch, caplog
     ):
-
         monkeypatch.setattr(
             pyodbc, "drivers", mock.Mock(side_effect=pyodbc.Error("Test error"))
         )
 
         with pytest.raises(pyodbc.Error):
-            dwh_instance._Dwh__get_list_of_supported_pyodbc_drivers()
+            dwh.Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs())
 
     @mock.patch("pyodbc.connect")
-    @mock.patch("pyprediktorutilities.dwh.dwh.Dwh._Dwh__set_driver")
-    def test_get_available_and_supported_drivers(self, _, mock_connect):
+    @mock.patch(
+        "pyprediktorutilities.dwh.dwh.Dwh._Dwh__get_list_of_supported_pyodbc_drivers"
+    )
+    def test_get_sets_available_driver(self, mock_get_supported_drivers, mock_connect):
+        mock_get_supported_drivers.return_value = ["Driver1", "Driver2"]
+        mock_connect.side_effect = [pyodbc.Error, None]
+
         dwh_instance = dwh.Dwh(
             helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs()
         )
-        dwh_instance._Dwh__get_list_of_supported_pyodbc_drivers = mock.Mock(
-            return_value=["Driver1", "Driver2", "Driver3"]
-        )
-        mock_connect.side_effect = [None, pyodbc.Error, None]
 
-        result = dwh_instance._Dwh__get_list_of_available_and_supported_pyodbc_drivers()
+        assert mock_connect.call_count == 2
+        assert dwh_instance.driver == "Driver2"
 
-        assert result == ["Driver1", "Driver3"]
-        assert mock_connect.call_count == 3
+    @mock.patch("pyodbc.drivers")
+    @mock.patch("pyprediktorutilities.dwh.dwh.Dwh._Dwh__set_driver")
+    def test_get_supported_but_not_available_drivers_raises_error(
+        self, mock_drivers, mock_connect
+    ):
+        mock_drivers.return_value = ["Driver1", "Driver2", "Driver3"]
+        mock_connect.side_effect = [pyodbc.Error, pyodbc.Error, pyodbc.Error]
+        dwh.Dwh(helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs())
 
     def test_connect_success(self, dwh_instance, monkeypatch):
         mock_connection = mock.Mock()
