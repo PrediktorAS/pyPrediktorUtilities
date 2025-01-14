@@ -170,10 +170,14 @@ class Dwh:
         Raises:
             ValueError: If no valid driver is found.
         """
-        available_drivers = self.__get_list_of_available_and_supported_pyodbc_drivers()
+        drivers = self.__get_list_of_available_and_supported_pyodbc_drivers()
+        available_drivers = drivers["available"]
+        supported_drivers = drivers["supported"]
 
-        if not available_drivers:
+        if not supported_drivers:
             raise ValueError("No supported ODBC drivers found.")
+        if not available_drivers:
+            raise Exception("Connection to the database cannot be established.")
 
         if driver_index < 0:
             self.driver = available_drivers[0]
@@ -193,7 +197,7 @@ class Dwh:
     @validate_call
     def __get_list_of_available_and_supported_pyodbc_drivers(
         self,
-    ) -> List[Any]:
+    ) -> dict:
         available_drivers = []
         supported_drivers = self.__get_list_of_supported_pyodbc_drivers()
 
@@ -204,7 +208,8 @@ class Dwh:
             except pyodbc.Error as err:
                 logger.info(f"Driver {driver} could not connect: {err}")
 
-        return available_drivers
+        drivers = {"available": available_drivers, "supported": supported_drivers}
+        return drivers
 
     """
     Private - Connector & Disconnector

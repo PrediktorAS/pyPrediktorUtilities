@@ -1,10 +1,8 @@
 import copy
-import datetime
 from typing import Any
 
 from openpyxl.worksheet import worksheet
 
-from script_components import helpers
 from script_components.tab_processors import basic as basic_processors
 
 
@@ -27,19 +25,9 @@ class MainPlantParametersExcelTabProcessor(
         excel_row_index = copy.copy(self.FIRST_ROW_WITH_VALUE_TO_FILL)
 
         for row_datum in self.data_tuple:
-            if isinstance(row_datum, bool):
-                row_datum = int(row_datum)
-            elif isinstance(row_datum, float):
-                if row_datum.is_integer():
-                    row_datum = int(row_datum)
-                else:
-                    row_datum = helpers.as_text(row_datum)
-                    row_datum = self._change_separator_from_dot_to_comma(row_datum)
-            elif isinstance(row_datum, datetime.date):
-                row_datum = row_datum.strftime(self.DATE_FORMAT)
+            transformed_row_data = self._determine_data_type_and_value(row_datum)
             cell_location = f"{self.VALUE_COLUMN}{excel_row_index}"
-
-            self.tab[cell_location] = helpers.as_text(row_datum)
+            self._place_value_at_location(cell_location, transformed_row_data)
 
             if self.is_missing_grid_station_id:
                 if excel_row_index == self.INDEX_PRIOR_TO_MISSING_GRID_STATION_ID:
