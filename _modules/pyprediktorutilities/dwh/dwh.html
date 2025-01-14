@@ -5,14 +5,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>pyprediktorutilities.dwh.dwh &mdash; pyPrediktorUtilities 0.4.5 documentation</title>
+  <title>pyprediktorutilities.dwh.dwh &mdash; pyPrediktorUtilities 0.4.6 documentation</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
       <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
 
   
       <script src="../../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../../_static/documentation_options.js?v=340bb9e5"></script>
+      <script src="../../../_static/documentation_options.js?v=03f3338f"></script>
       <script src="../../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/js/theme.js"></script>
@@ -253,10 +253,14 @@
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: If no valid driver is found.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">available_drivers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_list_of_available_and_supported_pyodbc_drivers</span><span class="p">()</span>
+        <span class="n">drivers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_list_of_available_and_supported_pyodbc_drivers</span><span class="p">()</span>
+        <span class="n">available_drivers</span> <span class="o">=</span> <span class="n">drivers</span><span class="p">[</span><span class="s2">&quot;available&quot;</span><span class="p">]</span>
+        <span class="n">supported_drivers</span> <span class="o">=</span> <span class="n">drivers</span><span class="p">[</span><span class="s2">&quot;supported&quot;</span><span class="p">]</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">available_drivers</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">supported_drivers</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No supported ODBC drivers found.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">available_drivers</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Connection to the database cannot be established.&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">driver_index</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">driver</span> <span class="o">=</span> <span class="n">available_drivers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -276,7 +280,7 @@
     <span class="nd">@validate_call</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">__get_list_of_available_and_supported_pyodbc_drivers</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
         <span class="n">available_drivers</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">supported_drivers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_list_of_supported_pyodbc_drivers</span><span class="p">()</span>
 
@@ -287,7 +291,8 @@
             <span class="k">except</span> <span class="n">pyodbc</span><span class="o">.</span><span class="n">Error</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
                 <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Driver </span><span class="si">{</span><span class="n">driver</span><span class="si">}</span><span class="s2"> could not connect: </span><span class="si">{</span><span class="n">err</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">available_drivers</span>
+        <span class="n">drivers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;available&quot;</span><span class="p">:</span> <span class="n">available_drivers</span><span class="p">,</span> <span class="s2">&quot;supported&quot;</span><span class="p">:</span> <span class="n">supported_drivers</span><span class="p">}</span>
+        <span class="k">return</span> <span class="n">drivers</span>
 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Private - Connector &amp; Disconnector</span>
