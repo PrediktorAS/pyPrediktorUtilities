@@ -687,6 +687,21 @@ class TestDwh:
                 helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
             )
 
+    def test_init_sets_driver_into_connection_string(self, monkeypatch):
+        driver_name = "MY_MSSQL_DRIVER"
+        monkeypatch.setattr("pyodbc.drivers", lambda: [driver_name])
+        monkeypatch.setattr(
+            dwh.Dwh,
+            "_Dwh__get_list_of_available_and_supported_pyodbc_drivers",
+            lambda self: {"available": [driver_name], "supported": [driver_name]},
+        )
+
+        dwh_instance = dwh.Dwh(
+            helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs()
+        )
+
+        assert driver_name in dwh_instance.connection_string
+
     @mock.patch("pyodbc.connect")
     def test_context_manager_enter(self, _, dwh_instance):
         assert dwh_instance.__enter__() == dwh_instance
