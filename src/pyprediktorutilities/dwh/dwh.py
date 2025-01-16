@@ -47,17 +47,18 @@ class Dwh:
         self.password = password
         self.connection = None
 
-        self.connection_string = (
+        self.connection_string_template = (
             f"UID={self.username};"
             + f"PWD={self.password};"
-            + f"DRIVER={self.driver};"
+            + "DRIVER={};"
             + f"SERVER={self.url};"
             + f"DATABASE={self.database};"
             + "TrustServerCertificate=yes;"
         )
-        self.connection_attempts = 3
-
         self.__set_driver(driver_index)
+        self.connection_string = self.connection_string_template.format(self.driver)
+
+        self.connection_attempts = 3
 
     def __enter__(self):
         self.__connect()
@@ -203,7 +204,10 @@ class Dwh:
 
         for driver in supported_drivers:
             try:
-                pyodbc.connect(self.connection_string, timeout=3)
+                connection_string_with_assigned_driver = (
+                    self.connection_string_template.format(driver)
+                )
+                pyodbc.connect(connection_string_with_assigned_driver, timeout=3)
                 available_drivers.append(driver)
             except pyodbc.Error as err:
                 logger.info(f"Driver {driver} could not connect: {err}")
