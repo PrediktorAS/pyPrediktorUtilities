@@ -1,0 +1,10 @@
+services:
+  app:
+    container_name: excel_dwh_filler_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ./config.env
+    volumes:
+      - ./:/app/
