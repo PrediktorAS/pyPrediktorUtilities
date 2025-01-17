@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 RUN chmod 644 config.env
 
-CMD ["python", "excel_sheets_filler.py"]
+CMD ["python", "excel_sheets_filler_dockerized.py"]
