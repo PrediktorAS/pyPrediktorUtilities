@@ -1,2 +1,2 @@
 openpyxl==3.1.2
-pyPrediktorUtilities==0.4.5
+pyPrediktorUtilities==0.4.7
