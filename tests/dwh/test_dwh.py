@@ -759,10 +759,8 @@ class TestDwh:
     def test_execute_with_fetch_error(self, dwh_instance, mock_pyodbc_connect, caplog):
         mock_pyodbc_connect.fetchall.side_effect = Exception("Fetch error")
 
-        result = dwh_instance.execute("SELECT * FROM test_table")
-
-        assert result == []
-        assert "Failed to execute query: Fetch error" in caplog.text
+        with pytest.raises(Exception):
+            dwh_instance.execute("SELECT * FROM test_table")
 
     def test_set_driver_with_valid_index(self, monkeypatch):
         available_drivers = {
