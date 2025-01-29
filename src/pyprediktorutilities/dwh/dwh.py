@@ -116,6 +116,9 @@ class Dwh:
                     break
 
             return data_sets if len(data_sets) > 1 else data_sets[0]
+        except Exception as e:
+            logging.error(f"Failed to fetch data: {e}")
+            raise
         finally:
             self.__disconnect()  # prevent from leaving open transactions in DWH
 
@@ -151,7 +154,7 @@ class Dwh:
             return result
         except Exception as e:
             logging.error(f"Failed to execute query: {e}")
-            return []
+            raise
         finally:
             self.__disconnect()  # prevent from leaving open transactions in DWH
 
