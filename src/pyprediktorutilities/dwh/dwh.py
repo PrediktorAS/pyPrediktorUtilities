@@ -149,7 +149,13 @@ class Dwh:
         self.__connect()
         try:
             self.cursor.execute(query, *args, **kwargs)
-            result = self.cursor.fetchall()
+
+            # Check if the cursor has a description attribute, indicating a result set
+            if self.cursor.description:
+                result = self.cursor.fetchall()
+            else:
+                result = []
+
             self.__commit()
             return result
         except Exception as e:

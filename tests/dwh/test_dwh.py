@@ -632,6 +632,7 @@ class TestDwh:
         # Mock the cursor and execute
         mock_cursor = mock.Mock()
         mock_execute = mock.Mock()
+        mock_description = mock.Mock()
 
         # Mock the connection method to return a mock connection with a mock cursor
         mock_connection = mock.Mock()
@@ -645,6 +646,7 @@ class TestDwh:
         # Mock the fetch method
         mock_fetch = mock.Mock(return_value=expected_result)
         mock_cursor.execute = mock_execute
+        mock_cursor.description = mock_description
         mock_cursor.fetchall = mock_fetch
 
         db = dwh.Dwh(
@@ -654,6 +656,42 @@ class TestDwh:
 
         mock_execute.assert_called_once_with(query, param_one, param_two)
         mock_fetch.assert_called_once()
+        assert actual_result == expected_result
+        assert db.connection is None
+
+    @mock.patch("pyprediktorutilities.dwh.dwh.Dwh._Dwh__set_driver")
+    def test_execute_when_parameter_passed_but_there_are_no_results_then_return_empty_list(
+        self, _, monkeypatch
+    ):
+        query = "INSERT INTO mytable VALUES (?, ?)"
+        param_one = "John"
+        param_two = "Smith"
+        driver_index = 0
+        expected_result = []
+
+        # Mock the cursor and execute
+        mock_cursor = mock.Mock()
+        mock_execute = mock.Mock()
+
+        # Mock the connection method to return a mock connection with a mock cursor
+        mock_connection = mock.Mock()
+        mock_connection.cursor.return_value = mock_cursor
+
+        monkeypatch.setattr(
+            "pyodbc.connect",
+            mock.Mock(return_value=mock_connection),
+        )
+
+        # Mock the fetch method
+        mock_cursor.execute = mock_execute
+        mock_cursor.description = None
+
+        db = dwh.Dwh(
+            helpers.grs(), helpers.grs(), helpers.grs(), helpers.grs(), driver_index
+        )
+        actual_result = db.execute(query, param_one, param_two)
+
+        mock_execute.assert_called_once_with(query, param_one, param_two)
         assert actual_result == expected_result
         assert db.connection is None
 
